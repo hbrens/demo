@@ -14,6 +14,9 @@ importers:
       element-plus:
         specifier: ^2.8.2
         version: 2.8.2(vue@3.5.4)
+      konva:
+        specifier: ^9.3.15
+        version: 9.3.15
       normalize.css:
         specifier: ^8.0.1
         version: 8.0.1
@@ -431,6 +434,9 @@ packages:
 
   is-what@3.14.1:
     resolution: {integrity: sha512-sNxgpk9793nzSs7bA6JQJGeIuRBQhAaNGG77kzYQgMkrID+lS6SlK07K5LaptscDlSaIgH+GPFzf+d75FVxozA==}
+
+  konva@9.3.15:
+    resolution: {integrity: sha512-6jceV1u75a41Fwky7HIg7Xr092sn9g+emE/F4KrkNey9j5IwM/No91z4g13P9kbh0NePzC20YvfyGVS5EzliUA==}
 
   less@4.2.0:
     resolution: {integrity: sha512-P3b3HJDBtSzsXUl0im2L7gTO5Ubg8mEN6G8qoTS77iXxXX4Hvu4Qj540PZDvQ8V6DmX6iXo98k7Md0Cm1PrLaA==}
@@ -932,6 +938,8 @@ snapshots:
     optional: true
 
   is-what@3.14.1: {}
+
+  konva@9.3.15: {}
 
   less@4.2.0:
     dependencies:

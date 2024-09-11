@@ -1,4 +1,7 @@
 <script setup>
+import EditorMain from '@/views/editor-view/editor-main.vue'
+import  { useDark } from '@vueuse/core'
+const isDark = useDark()
 
 </script>
 <template>
@@ -8,7 +11,7 @@
     </div>
     <div id="asideHorizontalHandler"></div>
     <div class="editor-view__main">
-
+      <editor-main></editor-main>
     </div>
   </div>
 </template>
