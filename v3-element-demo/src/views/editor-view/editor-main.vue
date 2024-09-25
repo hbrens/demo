@@ -3,6 +3,7 @@ import { ref } from 'vue'
 const activeTab = ref('outPainting')
 import OutPainting from '@/views/editor-view/out-painting.vue'
 import InPainting from '@/views/editor-view/in-painting.vue'
+import FreeDraw from '@/views/editor-view/free-draw.vue'
 </script>
 <template>
   <div class="editor-main">
@@ -11,7 +12,8 @@ import InPainting from '@/views/editor-view/in-painting.vue'
 
     <div class="editor-main__content">
 <!--      <out-painting></out-painting>-->
-      <in-painting></in-painting>
+<!--      <in-painting></in-painting>-->
+      <free-draw></free-draw>
     </div>
   </div>
 </template>
