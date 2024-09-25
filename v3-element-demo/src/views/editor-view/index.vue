@@ -1,6 +1,8 @@
 <script setup>
 import EditorMain from '@/views/editor-view/editor-main.vue'
 import  { useDark } from '@vueuse/core'
+// import InPainting from '@/views/editor-view/in-painting.vue'
+import OnlyMask from '@/views/editor-view/only-mask.vue'
 const isDark = useDark()
 
 </script>
@@ -11,7 +13,9 @@ const isDark = useDark()
     </div>
     <div id="asideHorizontalHandler"></div>
     <div class="editor-view__main">
-      <editor-main></editor-main>
+<!--      <editor-main></editor-main>-->
+<!--      <in-painting></in-painting>-->
+      <only-mask></only-mask>
     </div>
   </div>
 </template>
