@@ -28,6 +28,8 @@ const init = () => {
     height: stageContainer.value.clientHeight,
   })
 
+  setStageEvt(stage)
+
   bgLayer.value = new Konva.Layer();
   drawLayer.value = new Konva.Layer();
 
@@ -83,7 +85,6 @@ const init = () => {
       canvas.width = maskImage.width;
       canvas.height = maskImage.height;
       const context = canvas.getContext('2d');
-      console.log(maskImage.width, maskImage.height)
 
       context.drawImage(maskImage, 0, 0, maskImage.width, maskImage.height);
       const imageData = context.getImageData(0, 0, maskImage.width, maskImage.height);
@@ -105,7 +106,6 @@ const init = () => {
       // 将处理后的图像数据放回 canvas
       context.putImageData(imageData, 0, 0);
       const dataUrl = canvas.toDataURL()
-      console.log(dataUrl)
       const tempImage = new Image()
       tempImage.src = dataUrl
       tempImage.onload = () => {
@@ -139,15 +139,142 @@ const handleTest = () => {
   bgLayer.value.visible(!bgLayer.value.visible())
 }
 
+
+const menus = [
+  {
+    name: '设置为base',
+    action: () => {
+      console.log('设置为base')
+    }
+  }
+]
+
+const menuIsMousedown = ref(false)
+
+const setStageEvt = (stage) => {
+  stage.addEventListener('mousedown', function (e) {
+    if (e.button === 2) {
+      // 绘制右键菜单
+      console.log(drawLayer.value.getChildren())
+      drawLayer.value.removeChildren()
+      // drawLayer.value.getChildren().forEach((g) => {
+      //
+      // })
+
+      const group = new Konva.Group({
+        name: 'contextmenu',
+        width: stage.width(),
+        height: stage.height(),
+      })
+
+
+      let top = 0
+      const lineHeight = 30
+
+      const pos = stage.getPointerPosition()
+      if (pos) {
+
+        for (const menu of menus) {
+          const rect = new Konva.Rect({
+            x: pos.x,
+            y: pos.y + top,
+            width: 150,
+            height: lineHeight,
+            fill: '#fff',
+            stroke: '#999',
+            strokeWidth: 1,
+            name: 'contextmenu'
+          })
+
+          // 标题
+          const text = new Konva.Text({
+            x: pos.x,
+            y: pos.y + top,
+            text: menu.name,
+            name: 'contextmenu',
+            listening: false,
+            fontSize: 16,
+            fill: '#333',
+            width: 150,
+            height: lineHeight,
+            align: 'center',
+            verticalAlign: 'middle'
+          })
+
+          group.add(rect)
+          group.add(text)
+
+          // 菜单事件
+          rect.on('pointerclick', (e) => {
+            if (e.evt.button === 0) {
+              // 触发事件
+              // menu.action(e)
+
+              // 移除菜单
+              group.getChildren().forEach((o) => {
+                o.destroy()
+              })
+              group.removeChildren()
+            }
+
+            e.evt.preventDefault()
+            e.evt.stopPropagation()
+          })
+          rect.on('mousedown', (e) => {
+            if (e.evt.button === 0) {
+              // 按下效果
+              rect.fill('#dfdfdf')
+            }
+
+            e.evt.preventDefault()
+            e.evt.stopPropagation()
+          })
+          rect.on('mouseup', (e) => {
+            if (e.evt.button === 0) {
+
+            }
+          })
+          rect.on('mouseenter', (e) => {
+            if (menuIsMousedown.value) {
+              rect.fill('#dfdfdf')
+            } else {
+              // hover in
+              rect.fill('#efefef')
+            }
+
+            e.evt.preventDefault()
+            e.evt.stopPropagation()
+          })
+          rect.on('mouseout', () => {
+            // hover out
+            rect.fill('#fff')
+          })
+          rect.on('contextmenu', (e) => {
+            e.evt.preventDefault()
+            e.evt.stopPropagation()
+          })
+        }
+
+
+        drawLayer.value.add(group)
+      }
+    }
+  })
+}
+
 onMounted(() => {
   init()
+
+  operatorDomRef.value.addEventListener('contextmenu', (e) => {
+    e.preventDefault()
+  })
 })
 
 </script>
 <template>
   <div class="out-painting">
     <div class="out-painting__main">
-      <div class="operator-container">
+      <div class="operator-container" ref="operatorDomRef">
         <div class="operator-box" ref="stageContainer">
 
         </div>
