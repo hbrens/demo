@@ -9,7 +9,13 @@ const routes = [
     path: '/editor',
     name: 'editor-view',
     component: () => import('@/views/editor-view/index.vue')
+  },
+  {
+    path: '/vtable',
+    name: 'vtable',
+    component: () => import('@/views/edit-table/vtable.vue')
   }
+
 ]
 
 const router = createRouter({

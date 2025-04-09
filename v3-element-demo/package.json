@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@visactor/vtable-editors": "^1.17.5",
+    "@visactor/vue-vtable": "^1.17.5",
     "@vueuse/core": "^11.0.3",
     "element-plus": "^2.8.2",
     "konva": "^9.3.15",
