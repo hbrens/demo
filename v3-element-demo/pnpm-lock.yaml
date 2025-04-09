@@ -17,6 +17,12 @@ importers:
       '@vueuse/core':
         specifier: ^11.0.3
         version: 11.0.3(vue@3.5.4)
+      ag-grid-community:
+        specifier: ^33.2.2
+        version: 33.2.2
+      ag-grid-vue3:
+        specifier: ^33.2.2
+        version: 33.2.2(vue@3.5.4)
       element-plus:
         specifier: ^2.8.2
         version: 2.8.2(vue@3.5.4)
@@ -514,6 +520,17 @@ packages:
 
   abs-svg-path@0.1.1:
     resolution: {integrity: sha512-d8XPSGjfyzlXC3Xx891DJRyZfqk5JU0BJrDQcsWomFIV1/BIzPW5HDH5iDdWpqWaav0YVIEzT1RHTwWr0FFshA==}
+
+  ag-charts-types@11.2.2:
+    resolution: {integrity: sha512-+L7Hr0rqAdnEbQO0mkDuDD05/ovX/zqZzVCCuvG3qdPSxLlUe4cJg1/gsMJdBH3etTn9jVMwo0FmDr9Vx7fwFQ==}
+
+  ag-grid-community@33.2.2:
+    resolution: {integrity: sha512-AEB/nONdlxQaD3KTfgELr5GZsOw5xcSTEZ5TuqLRx3Fl3HqH4tFDXM2z4aQ4yXsEX4NRuWTx2V4YhR/Lp3Dw2g==}
+
+  ag-grid-vue3@33.2.2:
+    resolution: {integrity: sha512-6fs4CqgAtKr0FAsxY3/v/uuJ7Ic/wM1/UhRoeYNS60RXK5qUGNAbMs6NM0osna2zXZgQ+J310Rz0stfgOzT+fw==}
+    peerDependencies:
+      vue: ^3.5.0
 
   array-source@0.0.4:
     resolution: {integrity: sha512-frNdc+zBn80vipY+GdcJkLEbMWj3xmzArYApmUGxoiV8uAu/ygcs9icPdsGdA26h0MkHUMW6EN2piIvVx+M5Mw==}
@@ -1353,6 +1370,17 @@ snapshots:
       - vue
 
   abs-svg-path@0.1.1: {}
+
+  ag-charts-types@11.2.2: {}
+
+  ag-grid-community@33.2.2:
+    dependencies:
+      ag-charts-types: 11.2.2
+
+  ag-grid-vue3@33.2.2(vue@3.5.4):
+    dependencies:
+      ag-grid-community: 33.2.2
+      vue: 3.5.4
 
   array-source@0.0.4: {}
 

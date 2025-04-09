@@ -12,6 +12,8 @@
     "@visactor/vtable-editors": "^1.17.5",
     "@visactor/vue-vtable": "^1.17.5",
     "@vueuse/core": "^11.0.3",
+    "ag-grid-community": "^33.2.2",
+    "ag-grid-vue3": "^33.2.2",
     "element-plus": "^2.8.2",
     "konva": "^9.3.15",
     "normalize.css": "^8.0.1",

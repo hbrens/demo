@@ -14,6 +14,11 @@ const routes = [
     path: '/vtable',
     name: 'vtable',
     component: () => import('@/views/edit-table/vtable.vue')
+  },
+  {
+    path: '/ag-grid',
+    name: 'ag-grid',
+    component: () => import('@/views/ag-grid/index.vue')
   }
 
 ]
