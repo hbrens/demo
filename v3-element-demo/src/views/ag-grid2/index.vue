@@ -55,6 +55,10 @@ const athleteFilterParams = {
   maxNumConditions: 1,
 }
 
+const getUpdatedValues = () => {
+  
+}
+
 const columnDefs = ref([
   { 
     field: "athlete",
@@ -94,13 +98,26 @@ const defaultColDef = ref({
   filter: true,
 })
 
+const updateData = (data) => {
+    // 获取所有唯一的 country 值
+    const uniqueCountries = [...new Set(data.map(item => item.country))].sort();
+    
+    // 更新 country 列的 cellEditorParams
+    const countryCol = columnDefs.value.find(col => col.field === 'country');
+    if (countryCol) {
+      countryCol.cellEditorParams = {
+        values: uniqueCountries
+      };
+    }
+    
+    // 更新表格数据
+    rowData.value = data;
+  };
+
 const onGridReady = (params) => {
   gridApi.value = params.api;
   columnApi.value = params.columnApi;
 
-  const updateData = (data) => {
-    rowData.value = data
-  };
 
   fetch("https://www.ag-grid.com/example-assets/olympic-winners.json")
     .then((resp) => resp.json())
