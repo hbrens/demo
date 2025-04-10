@@ -47,6 +47,8 @@ const localeText = ref(AG_GRID_LOCALE_CN);
 
 const rowData = ref([]);
 
+// 添加编辑状态控制
+const isEditable = ref(true);
 
 const athleteFilterParams = {
   filterOptions: ["contains", "notContains"],
@@ -69,14 +71,8 @@ const onDeleteRow = (params) => {
 
 const columnTypes = ref({
   editableColumn: {
-    editable: params => params.data.year > 2010,
-    cellStyle: (params) => {
-      if (params.data.year > 2010) {
-        return {
-          backgroundColor: 'red'
-        }
-      }
-    }
+    editable: params => isEditable.value && params.data.year > 2010,
+    cellClass: params => params.data.year > 2010 ? 'editable-cell' : ''
   }
 });
 
@@ -157,6 +153,12 @@ const onGridReady = (params) => {
     .then((data) => updateData(data));
 }
 
+// 添加切换编辑状态的方法
+const toggleEditable = () => {
+  isEditable.value = !isEditable.value;
+  // 刷新表格以更新编辑状态
+  gridApi.value.refreshCells({ force: true });
+};
 
 </script>
 
@@ -164,7 +166,12 @@ const onGridReady = (params) => {
   <div class="grid-page">
     <div class="grid-container card">
       <div class="grid-header">
-        
+        <el-button 
+          :type="isEditable ? 'warning' : 'primary'" 
+          @click="toggleEditable"
+        >
+          {{ isEditable ? '禁用编辑' : '启用编辑' }}
+        </el-button>
       </div>
 
       <div class="grid-content">
@@ -198,6 +205,9 @@ const onGridReady = (params) => {
 
     .grid-header {
       height: 40px;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
     }
     .grid-content {
       flex: 1;
@@ -220,5 +230,9 @@ const onGridReady = (params) => {
     border-radius: 5px;
     margin-left: 5px;
   }
+}
+
+:deep(.editable-cell) {
+  background-color: #f0f9eb !important;
 }
 </style>
