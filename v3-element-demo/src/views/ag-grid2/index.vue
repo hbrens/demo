@@ -1,7 +1,9 @@
-<script setup lang="ts">
+<script setup lang="tsx">
 
-import { ref, shallowRef, onMounted } from 'vue';
+import { ref, shallowRef, onMounted, h, render } from 'vue';
 import { AgGridVue } from 'ag-grid-vue3'
+import { ElButton } from 'element-plus'
+import DeleteBtn from './deleteBtn.vue'
 
 import {
   ClientSideRowModelApiModule,
@@ -59,6 +61,10 @@ const getUpdatedValues = () => {
   
 }
 
+const onDeleteRow = (params) => {
+  console.log(params, 'delete')
+}
+
 const columnDefs = ref([
   { 
     field: "athlete",
@@ -80,6 +86,27 @@ const columnDefs = ref([
   { field: "silver" },
   { field: "sport" },
   { field: "total" },
+  {
+    headerName: '操作',
+    field: 'action',
+    editable: false,
+    cellRenderer: (params) => {
+      const container = document.createElement('div');
+      // 创建 Vue 组件
+      const button = h(
+        ElButton,
+        {
+          type: 'danger',
+          size: 'small',
+          onClick: () => onDeleteRow(params.data)
+        },
+        () => '删除'
+      );
+      // 渲染组件
+      render(button, container);
+      return container;
+    }
+  }
 ]);
 
 
@@ -175,6 +202,16 @@ const onGridReady = (params) => {
     border-radius: 10px;
     padding: 10px;
     box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
+  }
+
+  .btn-delete {
+    background-color: #ff0000;
+    color: #fff;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 5px;
+    margin-left: 5px;
   }
 }
 </style>
