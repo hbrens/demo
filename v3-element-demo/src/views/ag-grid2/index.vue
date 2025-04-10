@@ -86,7 +86,7 @@ const columnDefs = ref([
     cellEditor: 'agSelectCellEditor',
     cellEditorParams: {
         values: ['English', 'Spanish', 'French', 'Portuguese', '(other)'],
-    }
+    },
   },
   { field: "year", type: 'editableColumn' },
   { field: "date", type: 'editableColumn' },
@@ -116,6 +116,15 @@ const columnDefs = ref([
     }
   }
 ]);
+
+function restoreFromHardCoded() {
+  const hardcodedFilter = {
+    age: { type: "lessThan", filter: "30" },
+    athlete: { type: "startsWith", filter: "Mich" },
+    date: { type: "lessThan", dateFrom: "2010-01-01" },
+  };
+  gridApi.value!.setFilterModel(hardcodedFilter);
+}
 
 
 const onCellValueChanged = (params) => {
@@ -195,6 +204,8 @@ const toggleColumnVisibility = (field, visible) => {
         >
           {{ isEditable ? '禁用编辑' : '启用编辑' }}
         </el-button>
+
+        <el-button @click="restoreFromHardCoded">设置过滤</el-button>
 
         <!-- 添加列显示控制区域 -->
         <div class="column-visibility-controls">
