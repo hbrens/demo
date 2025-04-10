@@ -16,6 +16,7 @@ import {
   TextFilterModule,
   NumberFilterModule,
   LocaleModule,
+  CellStyleModule,
   themeAlpine,
   themeBalham,
   themeMaterial,
@@ -33,6 +34,7 @@ ModuleRegistry.registerModules([
   NumberFilterModule,
   ValidationModule /* Development Only */,
   TextFilterModule,
+  CellStyleModule,
 ]);
 
 import { AG_GRID_LOCALE_CN } from '@ag-grid-community/locale';
@@ -65,27 +67,36 @@ const onDeleteRow = (params) => {
   console.log(params, 'delete')
 }
 
+const columnTypes = ref({
+  editableColumn: {
+    editable: params => params.data.year > 2010,
+    cellStyle: (params) => {
+      if (params.data.year > 2010) {
+        return {
+          backgroundColor: 'red'
+        }
+      }
+    }
+  }
+});
+
 const columnDefs = ref([
-  { 
-    field: "athlete",
-    filterParams: athleteFilterParams,
-   },
-  { 
-    field: "age",
-  },
+  { field: "athlete", type: 'editableColumn', filterParams: athleteFilterParams },
+  { field: "age", type: 'editableColumn' },
   { 
     field: "country",
+    type: 'editableColumn',
     cellEditor: 'agSelectCellEditor',
     cellEditorParams: {
         values: ['English', 'Spanish', 'French', 'Portuguese', '(other)'],
     }
   },
-  { field: "year" },
-  { field: "date" },
-  { field: "gold" },
-  { field: "silver" },
-  { field: "sport" },
-  { field: "total" },
+  { field: "year", type: 'editableColumn' },
+  { field: "date", type: 'editableColumn' },
+  { field: "gold", type: 'editableColumn' },
+  { field: "silver", type: 'editableColumn' },
+  { field: "sport", type: 'editableColumn' },
+  { field: "total", type: 'editableColumn' },
   {
     headerName: '操作',
     field: 'action',
@@ -119,11 +130,6 @@ const onCellValueChanged = (params) => {
     行数据: params.data
   })
 }
-
-const defaultColDef = ref({
-  editable: true,
-  filter: true,
-})
 
 const updateData = (data) => {
     // 获取所有唯一的 country 值
@@ -167,6 +173,7 @@ const onGridReady = (params) => {
           @grid-ready="onGridReady"
           @cell-value-changed="onCellValueChanged"
           :columnDefs="columnDefs"
+          :columnTypes="columnTypes"
           :suppressScrollOnNewData="true"
           :defaultColDef="defaultColDef"
           :localeText="localeText"
