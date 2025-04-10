@@ -2,7 +2,7 @@
 
 import { ref, shallowRef, onMounted, h, render } from 'vue';
 import { AgGridVue } from 'ag-grid-vue3'
-import { ElButton } from 'element-plus'
+import { ElButton, ElCheckbox } from 'element-plus'
 import DeleteBtn from './deleteBtn.vue'
 
 import {
@@ -17,10 +17,12 @@ import {
   NumberFilterModule,
   LocaleModule,
   CellStyleModule,
+  RenderApiModule,
   themeAlpine,
   themeBalham,
   themeMaterial,
   themeQuartz,
+  ColumnApiModule,
 } from "ag-grid-community";
 
 
@@ -35,6 +37,8 @@ ModuleRegistry.registerModules([
   ValidationModule /* Development Only */,
   TextFilterModule,
   CellStyleModule,
+  RenderApiModule,
+  ColumnApiModule
 ]);
 
 import { AG_GRID_LOCALE_CN } from '@ag-grid-community/locale';
@@ -61,10 +65,6 @@ const athleteFilterParams = {
   maxNumConditions: 1,
 }
 
-const getUpdatedValues = () => {
-  
-}
-
 const onDeleteRow = (params) => {
   console.log(params, 'delete')
 }
@@ -77,7 +77,8 @@ const columnTypes = ref({
 });
 
 const columnDefs = ref([
-  { field: "athlete", type: 'editableColumn', filterParams: athleteFilterParams },
+  { 
+    field: "athlete", type: 'editableColumn', filterParams: athleteFilterParams },
   { field: "age", type: 'editableColumn' },
   { 
     field: "country",
@@ -150,7 +151,9 @@ const onGridReady = (params) => {
 
   fetch("https://www.ag-grid.com/example-assets/olympic-winners.json")
     .then((resp) => resp.json())
-    .then((data) => updateData(data));
+    .then((data) => {
+      updateData(data)
+    });
 }
 
 // 添加切换编辑状态的方法
@@ -158,6 +161,26 @@ const toggleEditable = () => {
   isEditable.value = !isEditable.value;
   // 刷新表格以更新编辑状态
   gridApi.value.refreshCells({ force: true });
+};
+
+const defaultColDef = ref({
+  filter: true,
+  suppressMenuHide: true, // 显示菜单按钮（三个点）
+  
+})
+
+// 添加列显示控制
+const visibleColumns = ref(columnDefs.value.map(col => ({
+  field: col.field,
+  headerName: col.headerName || col.field,
+  visible: true
+})));
+
+// 添加切换列可见性的方法
+const toggleColumnVisibility = (field, visible) => {
+  if (gridApi.value) {
+    gridApi.value.setColumnsVisible([field], visible);
+  }
 };
 
 </script>
@@ -172,6 +195,17 @@ const toggleEditable = () => {
         >
           {{ isEditable ? '禁用编辑' : '启用编辑' }}
         </el-button>
+
+        <!-- 添加列显示控制区域 -->
+        <div class="column-visibility-controls">
+          <el-checkbox
+            v-for="col in visibleColumns"
+            :key="col.field"
+            v-model="col.visible"
+            @change="(val) => toggleColumnVisibility(col.field, val)"
+            :label="col.headerName"
+          />
+        </div>
       </div>
 
       <div class="grid-content">
@@ -204,10 +238,19 @@ const toggleEditable = () => {
     flex-direction: column;
 
     .grid-header {
-      height: 40px;
+      height: auto; // 修改为自动高度以适应复选框
+      min-height: 40px;
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
-      padding: 0 10px;
+      gap: 10px;
+      padding: 10px;
+
+      .column-visibility-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
     }
     .grid-content {
       flex: 1;
