@@ -3,7 +3,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 const routes = [
   {
     path: '/',
-    redirect: '/editor',
+    redirect: '/ag-grid2',
   },
   {
     path: '/editor',
@@ -19,6 +19,11 @@ const routes = [
     path: '/ag-grid',
     name: 'ag-grid',
     component: () => import('@/views/ag-grid/index.vue')
+  },
+  {
+    path: '/ag-grid2',
+    name: 'ag-grid2',
+    component: () => import('@/views/ag-grid2/index.vue')
   }
 
 ]

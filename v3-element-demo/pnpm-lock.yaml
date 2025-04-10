@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@ag-grid-community/locale':
+        specifier: ^33.2.2
+        version: 33.2.2
       '@visactor/vtable-editors':
         specifier: ^1.17.5
         version: 1.17.5
@@ -50,6 +53,9 @@ importers:
         version: 5.4.4(less@4.2.0)
 
 packages:
+
+  '@ag-grid-community/locale@33.2.2':
+    resolution: {integrity: sha512-wfPjkvumMzrpZBdeZJiXbkaxUT+TZXvGuuR9LzpbpOQWSnQFrP5KV+oq210CtP5Lo6g0gfjFpsZ0AD89uvNOjg==}
 
   '@babel/helper-string-parser@7.24.8':
     resolution: {integrity: sha512-pO9KhhRcuUyGnJWwyEgnRJTSIZHiT+vMD0kPeD+so0l7mxkMT19g3pjY9GTnHySck/hDzq+dtW/4VgnMkippsQ==}
@@ -934,6 +940,8 @@ packages:
         optional: true
 
 snapshots:
+
+  '@ag-grid-community/locale@33.2.2': {}
 
   '@babel/helper-string-parser@7.24.8': {}
 

@@ -29,6 +29,8 @@ ModuleRegistry.registerModules([
 import { ref, shallowRef } from 'vue'
 import { AgGridVue } from 'ag-grid-vue3'
 
+
+
 const defaultColDef = ref({
   editable: true,
   filter: true,
