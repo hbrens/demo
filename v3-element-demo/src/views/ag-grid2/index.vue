@@ -3,7 +3,8 @@
 import { ref, shallowRef, onMounted, h, render } from 'vue';
 import { AgGridVue } from 'ag-grid-vue3'
 import { ElButton, ElCheckbox } from 'element-plus'
-import DeleteBtn from './deleteBtn.vue'
+import CustomHeader from './CustomHeader.vue'
+import AthleteEditor from './AthleteEditor.vue'
 
 import {
   ClientSideRowModelApiModule,
@@ -22,6 +23,7 @@ import {
   themeBalham,
   themeMaterial,
   themeQuartz,
+  CustomEditorModule,
   ColumnApiModule,
 } from "ag-grid-community";
 
@@ -33,6 +35,7 @@ ModuleRegistry.registerModules([
   ClientSideRowModelModule,
   SelectEditorModule,
   LocaleModule,
+  CustomEditorModule,
   NumberFilterModule,
   ValidationModule /* Development Only */,
   TextFilterModule,
@@ -76,9 +79,29 @@ const columnTypes = ref({
   }
 });
 
+const dialogVisible = ref(false);
+const currentEditData = ref({
+  rowIndex: null,
+  athlete: ''
+});
+
 const columnDefs = ref([
   { 
-    field: "athlete", type: 'editableColumn', filterParams: athleteFilterParams },
+    field: "athlete", 
+    type: 'editableColumn', 
+    filterParams: athleteFilterParams,
+    headerComponent: CustomHeader,
+    editable: false,
+    onCellDoubleClicked: (params) => {
+      if (isEditable.value && params.data.year > 2010) {
+        currentEditData.value = {
+          rowIndex: params.rowIndex,
+          athlete: params.value
+        };
+        dialogVisible.value = true;
+      }
+    }
+  },
   { field: "age", type: 'editableColumn' },
   { 
     field: "country",
@@ -192,6 +215,17 @@ const toggleColumnVisibility = (field, visible) => {
   }
 };
 
+// 添加保存编辑数据的方法
+const handleSaveAthlete = () => {
+  if (currentEditData.value.rowIndex !== null) {
+    gridApi.value.getRowNode(currentEditData.value.rowIndex).setDataValue(
+      'athlete',
+      currentEditData.value.athlete
+    );
+  }
+  dialogVisible.value = false;
+};
+
 </script>
 
 <template>
@@ -233,6 +267,25 @@ const toggleColumnVisibility = (field, visible) => {
         </ag-grid-vue>
       </div>
     </div>
+
+    <!-- 添加编辑对话框 -->
+    <el-dialog
+      v-model="dialogVisible"
+      title="编辑运动员信息"
+      width="30%"
+    >
+      <el-form>
+        <el-form-item label="运动员名称">
+          <el-input v-model="currentEditData.athlete" placeholder="请输入运动员名称"></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleSaveAthlete">确认</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
