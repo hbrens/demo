@@ -112,11 +112,20 @@ const columnDefs = ref([
     },
   },
   { field: "year", type: 'editableColumn' },
-  { field: "date", type: 'editableColumn' },
-  { field: "gold", type: 'editableColumn' },
-  { field: "silver", type: 'editableColumn' },
-  { field: "sport", type: 'editableColumn' },
-  { field: "total", type: 'editableColumn' },
+  // { field: "date", type: 'editableColumn' },
+  // { field: "gold", type: 'editableColumn' },
+  // { field: "silver", type: 'editableColumn' },
+  // { field: "sport", type: 'editableColumn' },
+  // { field: "total", type: 'editableColumn' },
+  {
+    headerName: "年龄和年份", 
+    colId: 'ageYear',
+    valueGetter: (params) => {
+      return params.data.age + ' ' + params.data.year;
+    },
+    hide: true,
+    editable: false
+  },
   {
     headerName: '操作',
     field: 'action',
@@ -173,7 +182,7 @@ const updateData = (data) => {
     }
     
     // 更新表格数据
-    rowData.value = data;
+    rowData.value = data.slice(0, 1000);
   };
 
 const onGridReady = (params) => {
@@ -226,6 +235,28 @@ const handleSaveAthlete = () => {
   dialogVisible.value = false;
 };
 
+// 修改筛选方法
+const setAgeYearFilter = () => {
+  if (gridApi.value) {
+    gridApi.value.setFilterModel({
+      'ageYear': {
+        filterType: 'text',
+        operator: 'OR',
+        conditions: [
+          {
+            type: 'contains',
+            filter: '30'
+          },
+          {
+            type: 'contains',
+            filter: '2008'
+          }
+        ]
+      }
+    });
+  }
+};
+
 </script>
 
 <template>
@@ -239,7 +270,7 @@ const handleSaveAthlete = () => {
           {{ isEditable ? '禁用编辑' : '启用编辑' }}
         </el-button>
 
-        <el-button @click="restoreFromHardCoded">设置过滤</el-button>
+        <el-button @click="setAgeYearFilter">设置过滤</el-button>
 
         <!-- 添加列显示控制区域 -->
         <div class="column-visibility-controls">
