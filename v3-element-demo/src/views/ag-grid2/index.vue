@@ -149,14 +149,42 @@ const columnDefs = ref([
   }
 ]);
 
-function restoreFromHardCoded() {
-  const hardcodedFilter = {
-    age: { type: "lessThan", filter: "30" },
-    athlete: { type: "startsWith", filter: "Mich" },
-    date: { type: "lessThan", dateFrom: "2010-01-01" },
-  };
-  gridApi.value!.setFilterModel(hardcodedFilter);
-}
+// function restoreFromHardCoded() {
+//   const hardcodedFilter = {
+//     age: {
+//       filterType: 'number',
+//       operator: 'OR',
+//       conditions: [
+//         {
+//           type: 'equals',
+//           filter: '20',
+//           filterType: 'number'
+//         },
+//         {
+//           type: 'equals',
+//           filter: '24',
+//           filterType: 'number'
+//         },
+//         {
+//           type: 'equals',
+//           filter: '25',
+//           filterType: 'number'
+//         },
+//         {
+//           type: 'equals',
+//           filter: '30',
+//           filterType: 'number'
+//         },
+//         {
+//           type: 'equals',
+//           filter: '40',
+//           filterType: 'number'
+//         }
+//       ]
+//     }
+//   };
+//   gridApi.value!.setFilterModel(hardcodedFilter);
+// }
 
 
 const onCellValueChanged = (params) => {
@@ -169,7 +197,16 @@ const onCellValueChanged = (params) => {
   })
 }
 
+// 添加原始数据存储
+const originalData = ref([]);
+// 添加选中的年龄值数组
+const selectedAges = ref([20, 24, 25, 30, 40]);
+
+// 修改 updateData 函数
 const updateData = (data) => {
+    // 保存原始数据
+    originalData.value = data.slice(0, 1000);
+    
     // 获取所有唯一的 country 值
     const uniqueCountries = [...new Set(data.map(item => item.country))].sort();
     
@@ -183,7 +220,25 @@ const updateData = (data) => {
     
     // 更新表格数据
     rowData.value = data.slice(0, 1000);
-  };
+};
+
+// 添加手动筛选函数
+const filterBySelectedAges = () => {
+  if (!originalData.value.length) return;
+  
+  // 根据选中的年龄值筛选数据
+  const filteredData = originalData.value.filter(item => 
+    selectedAges.value.includes(item.age)
+  );
+  
+  // 更新表格数据
+  rowData.value = filteredData;
+};
+
+// 修改 restoreFromHardCoded 函数
+function restoreFromHardCoded() {
+  filterBySelectedAges();
+}
 
 const onGridReady = (params) => {
   gridApi.value = params.api;
@@ -270,7 +325,19 @@ const setAgeYearFilter = () => {
           {{ isEditable ? '禁用编辑' : '启用编辑' }}
         </el-button>
 
-        <el-button @click="setAgeYearFilter">设置过滤</el-button>
+        <el-button @click="restoreFromHardCoded">设置过滤</el-button>
+
+        <!-- 添加年龄多选控件 -->
+        <div class="age-filter">
+          <span>年龄筛选：</span>
+          <el-checkbox-group v-model="selectedAges" @change="filterBySelectedAges">
+            <el-checkbox :label="20">20岁</el-checkbox>
+            <el-checkbox :label="24">24岁</el-checkbox>
+            <el-checkbox :label="25">25岁</el-checkbox>
+            <el-checkbox :label="30">30岁</el-checkbox>
+            <el-checkbox :label="40">40岁</el-checkbox>
+          </el-checkbox-group>
+        </div>
 
         <!-- 添加列显示控制区域 -->
         <div class="column-visibility-controls">
@@ -341,6 +408,12 @@ const setAgeYearFilter = () => {
       gap: 10px;
       padding: 10px;
 
+      .age-filter {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
       .column-visibility-controls {
         display: flex;
         flex-wrap: wrap;
@@ -372,5 +445,11 @@ const setAgeYearFilter = () => {
 
 :deep(.editable-cell) {
   background-color: #f0f9eb !important;
+}
+
+.age-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 </style>
