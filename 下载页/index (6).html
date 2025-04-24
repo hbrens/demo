@@ -1,0 +1,161 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新视界APP下载</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    body {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      background: #f8fafc;
+      color: #333;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .content {
+      text-align: center;
+      padding: 30px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .app-icon {
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 20px;
+      background: #60a5fa;
+      border-radius: 15px;
+      box-shadow: 0 0 10px rgba(96, 165, 250, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .app-icon::before {
+      content: '占位';
+      color: #fff;
+      font-size: 1.2rem;
+      font-weight: bold;
+      text-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+    }
+
+    .title {
+      font-size: 3.5rem;
+      font-weight: bold;
+      margin-bottom: 40px;
+      color: #60a5fa;
+    }
+
+    .slogan {
+      font-size: 1.8rem;
+      margin-bottom: 40px;
+      letter-spacing: 4px;
+      line-height: 2;
+      color: #93c5fd;
+    }
+
+    .description {
+      font-size: 1.5rem;
+      margin-bottom: 40px;
+      line-height: 1.8;
+      color: #64748b;
+    }
+
+    .download-btn {
+      display: inline-block;
+      padding: 20px 50px;
+      background: #60a5fa;
+      border-radius: 50px;
+      font-size: 1.8rem;
+      font-weight: bold;
+      text-decoration: none;
+      color: #fff;
+      margin-bottom: 40px;
+      box-shadow: 0 0 10px rgba(96, 165, 250, 0.2);
+      transition: background 0.3s;
+    }
+
+    .download-btn:hover {
+      background: #3b82f6;
+    }
+
+    .compatibility {
+      font-size: 1.3rem;
+      margin-bottom: 30px;
+      line-height: 1.6;
+      color: #94a3b8;
+    }
+
+    .footer {
+      font-size: 1rem;
+      padding: 15px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="content">
+    <div class="app-icon"></div>
+    <h1 class="title">新视界APP</h1>
+    <p class="slogan">新视界 新视角 新征程</p>
+    <p class="description">体验未来算法 用技术记录美好生活</p>
+    <a href="#" class="download-btn">立即下载</a>
+    <p class="compatibility">适配Android 9.0以上</p>
+    <p class="compatibility">适配鸿蒙2.0</p>
+  </div>
+  <div class="footer">© 2025 新视界科技有限公司 版权所有</div>
+</body>
+</html>
