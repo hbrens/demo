@@ -72,7 +72,6 @@ const processData = () => {
 
 // 初始化图表
 const initChart = () => {
-  console.log(props.campusData)
   const lmData = processData()
   const lmNames = Array.from(lmData.keys())
   const colors = ['#60acfc', '#32d3eb', '#5bc49f', '#feb64d']
