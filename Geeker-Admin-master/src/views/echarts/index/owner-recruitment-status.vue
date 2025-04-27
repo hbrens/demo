@@ -20,7 +20,7 @@ const odData = computed(() => recruitmentStatsStore.odData)
 const postDocData = computed(() => recruitmentStatsStore.postDocData)
 
 // 定义状态列表
-const statusList = ['招聘中', '沟通中', '面试中', '待入职', '已入职', '放弃', '总计']
+const statusList = ['沟通中', '面试中', '已入职', '其他', '总计']
 
 // 定义渠道列表
 const channels = [
@@ -40,12 +40,10 @@ const ownerStatusData = computed(() => {
       ownerStats[owner] = {}
       channels.forEach(channel => {
         ownerStats[owner][channel.key] = {
-          '招聘中': 0,
           '沟通中': 0,
           '面试中': 0,
-          '待入职': 0,
           '已入职': 0,
-          '放弃': 0,
+          '其他': 0,
           '总计': 0
         }
       })
@@ -57,8 +55,17 @@ const ownerStatusData = computed(() => {
     if (!data?.length) return
     data.forEach(item => {
       initializeOwnerData(item.owner)
-      ownerStats[item.owner][channelKey][item.status]++
+      
+      // 增加总计
       ownerStats[item.owner][channelKey]['总计']++
+      
+      // 根据状态分类
+      if (['沟通中', '面试中', '已入职'].includes(item.status)) {
+        ownerStats[item.owner][channelKey][item.status]++
+      } else {
+        // 其他状态归类到"其他"
+        ownerStats[item.owner][channelKey]['其他']++
+      }
     })
   }
 
@@ -196,7 +203,7 @@ const getColumnMinWidth = (type: 'owner' | 'status') => {
 
 :deep(.el-table) {
   // 基础样式
-  --el-table-border-color: #f0f0f0;
+  --el-table-border-color: #d9d9d9;
   --el-table-header-bg-color: #f0f5ff;
   --el-table-row-hover-bg-color: #f5f5f5;
   
@@ -205,7 +212,24 @@ const getColumnMinWidth = (type: 'owner' | 'status') => {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid #f0f0f0;
+  
+  // 单元格样式
+  td {
+    font-size: 14px;
+    color: #262626;
+    padding: 10px 4px;
+    border: 1px solid #d9d9d9 !important;  // 加重内部单元格边框
+  }
+  
+  // 表头单元格样式
+  th {
+    border: 1px solid #d9d9d9 !important;  // 加重表头单元格边框
+  }
+  
+  // 取消原有的一些边框样式，避免重复
+  .el-table__cell {
+    border-right: none;
+  }
   
   // 表头样式
   .el-table__header-wrapper {
@@ -217,23 +241,12 @@ const getColumnMinWidth = (type: 'owner' | 'status') => {
       color: #262626;
       background-color: var(--el-table-header-bg-color);
       padding: 12px 8px;
-      border-right: 1px solid rgba(0, 0, 0, 0.05);
       transition: all 0.3s;
       
       &.is-leaf {
         border-bottom: 2px solid #e6f7ff;
       }
     }
-  }
-  
-  // 单元格样式
-  td {
-    font-size: 14px;
-    color: #262626;
-    padding: 10px 4px;
-    border-bottom: 1px solid var(--el-table-border-color);
-    border-right: 1px solid rgba(0, 0, 0, 0.02);
-    transition: all 0.2s;
   }
   
   // 总计列样式
