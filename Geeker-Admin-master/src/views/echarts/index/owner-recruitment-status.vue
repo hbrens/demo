@@ -135,7 +135,7 @@ const getColumnMinWidth = (type: 'owner' | 'status') => {
       <el-table-column
         prop="owner"
         label="Owner"
-        :min-width="getColumnMinWidth('owner')"
+        width="120"
         fixed="left"
         align="center"
       />
@@ -152,7 +152,7 @@ const getColumnMinWidth = (type: 'owner' | 'status') => {
           :prop="`${channel.key}_${status}`"
           :label="status"
           align="center"
-          :min-width="getColumnMinWidth('status')"
+          width="80"
         >
           <template #default="{ row }">
             {{ row[`${channel.key}_${status}`] }}
@@ -173,11 +173,13 @@ const getColumnMinWidth = (type: 'owner' | 'status') => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
 }
 
 .card-header {
   margin-bottom: 24px;
   text-align: center;
+  flex-shrink: 0;
 
   h3 {
     margin: 0;
@@ -209,21 +211,61 @@ const getColumnMinWidth = (type: 'owner' | 'status') => {
   
   // 表格整体样式
   width: 100%;
+  height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   border-radius: 8px;
-  overflow: hidden;
+  
+  // 表格容器样式
+  .el-table__body-wrapper {
+    overflow-x: auto;
+    overflow-y: auto;
+    
+    &::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 3px;
+      
+      &:hover {
+        background: #a8a8a8;
+      }
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 3px;
+    }
+  }
   
   // 单元格样式
   td {
     font-size: 14px;
     color: #262626;
-    padding: 10px 4px;
-    border: 1px solid #d9d9d9 !important;  // 加重内部单元格边框
+    padding: 8px 4px;
+    border: 1px solid #d9d9d9 !important;
+    white-space: nowrap;
   }
   
   // 表头单元格样式
   th {
-    border: 1px solid #d9d9d9 !important;  // 加重表头单元格边框
+    border: 1px solid #d9d9d9 !important;
+    padding: 8px 4px !important;
+    white-space: nowrap;
+    background-color: var(--el-table-header-bg-color) !important;
+  }
+  
+  // 固定列样式
+  .el-table__fixed {
+    height: 100% !important;
+    box-shadow: 4px 0 8px rgba(0, 0, 0, 0.1);
+    
+    .el-table__fixed-header-wrapper,
+    .el-table__fixed-body-wrapper {
+      background-color: #fff;
+    }
   }
   
   // 取消原有的一些边框样式，避免重复
@@ -271,64 +313,6 @@ const getColumnMinWidth = (type: 'owner' | 'status') => {
   // hover效果
   tbody tr:hover td {
     background-color: rgba(24, 144, 255, 0.03);
-  }
-  
-  // 滚动条样式
-  .el-table__body-wrapper {
-    &::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-    
-    &::-webkit-scrollbar-thumb {
-      background-color: #bfbfbf;
-      border-radius: 20px;
-      border: 2px solid #f5f5f5;
-      
-      &:hover {
-        background-color: #8c8c8c;
-      }
-    }
-    
-    &::-webkit-scrollbar-track {
-      background-color: #f5f5f5;
-      border-radius: 20px;
-    }
-  }
-  
-  // 固定列样式
-  .el-table__fixed {
-    box-shadow: 6px 0 8px rgba(0, 0, 0, 0.05);
-    
-    .el-table__fixed-header-wrapper,
-    .el-table__fixed-body-wrapper {
-      border-right: 1px solid #f0f0f0;
-    }
-  }
-  
-  // 斑马纹样式 - 增强对比度
-  .el-table__row--striped td {
-    background-color: rgba(24, 144, 255, 0.08) !important;
-  }
-  
-  // 斑马纹行悬停效果
-  .el-table__row--striped:hover td {
-    background-color: rgba(24, 144, 255, 0.08) !important;
-  }
-  
-  // 表格头部下边框
-  .el-table__header {
-    border-bottom: 1px solid #e6f7ff;
-  }
-  
-  // 无数据样式
-  .el-table__empty-block {
-    background-color: #f9f9f9;
-    min-height: 100px;
-    
-    .el-table__empty-text {
-      color: #8c8c8c;
-    }
   }
   
   // 校园招聘渠道样式

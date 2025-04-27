@@ -19,9 +19,8 @@ const postDocData = computed(() => recruitmentStatsStore.postDocData)
 
 <template>
   <div class="chart-container">
-    <el-space direction="vertical" class="full-space pb-0" :size="0" fill>
-      <CardData />
-      <el-row :gutter="16" style="margin-top: 16px;">
+      <CardData style="width: 100%;" />
+      <el-row :gutter="16" style="margin-top: 16px;width: 100%;overflow-x: hidden;">
         <el-col :span="24" :sm="24" class="chart-col">
           <OwnerRecruitmentStatus />
         </el-col>
@@ -41,7 +40,6 @@ const postDocData = computed(() => recruitmentStatsStore.postDocData)
           />
         </el-col>
       </el-row>
-    </el-space>
   </div>
 </template>
 
