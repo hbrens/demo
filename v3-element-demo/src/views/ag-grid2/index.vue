@@ -5,6 +5,7 @@ import { AgGridVue } from 'ag-grid-vue3'
 import { ElButton, ElCheckbox } from 'element-plus'
 import CustomHeader from './CustomHeader.vue'
 import AthleteEditor from './AthleteEditor.vue'
+import CustomLargeTextEditor from './CustomLargeTextEditor.vue'
 
 import {
   ClientSideRowModelApiModule,
@@ -25,6 +26,7 @@ import {
   themeQuartz,
   CustomEditorModule,
   ColumnApiModule,
+  LargeTextEditorModule,
 } from "ag-grid-community";
 
 
@@ -40,6 +42,7 @@ ModuleRegistry.registerModules([
   ValidationModule /* Development Only */,
   TextFilterModule,
   CellStyleModule,
+  LargeTextEditorModule,
   RenderApiModule,
   ColumnApiModule
 ]);
@@ -115,7 +118,17 @@ const columnDefs = ref([
   // { field: "date", type: 'editableColumn' },
   // { field: "gold", type: 'editableColumn' },
   // { field: "silver", type: 'editableColumn' },
-  // { field: "sport", type: 'editableColumn' },
+  {
+    field: "sport", 
+    type: 'editableColumn',
+    cellEditor: CustomLargeTextEditor,
+    cellEditorPopup: true,
+    cellEditorParams: {
+      maxLength: 1000,    // 最大字符数
+      rows: 10,           // 文本框行数
+      cols: 50            // 文本框列数
+    }
+  },
   // { field: "total", type: 'editableColumn' },
   {
     headerName: "年龄和年份", 
