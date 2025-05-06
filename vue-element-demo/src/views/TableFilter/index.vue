@@ -96,7 +96,41 @@ export default {
         { value: 1003, label: '1003' },
         { value: 1004, label: '1004' },
         { value: 1005, label: '1005' },
-        { value: 1006, label: '1006' }
+        { value: 1006, label: '1006' },
+        { value: 1007, label: '1007' },
+        { value: 1008, label: '1008' },
+        { value: 1009, label: '1009' },
+        { value: 1010, label: '1010' },
+        { value: 1011, label: '1011' },
+        { value: 1012, label: '1012' },
+        { value: 1013, label: '1013' },
+        { value: 1014, label: '1014' },
+        { value: 1015, label: '1015' },
+        { value: 1016, label: '1016' },
+        { value: 1017, label: '1017' },
+        { value: 1018, label: '1018' },
+        { value: 1019, label: '1019' },
+        { value: 1020, label: '1020' },
+        { value: 1021, label: '1021' },
+        { value: 1022, label: '1022' },
+        { value: 1023, label: '1023' },
+        { value: 1024, label: '1024' },
+        { value: 1025, label: '1025' },
+        { value: 1026, label: '1026' },
+        { value: 1027, label: '1027' },
+        { value: 1028, label: '1028' },
+        { value: 1029, label: '1029' },
+        { value: 1030, label: '1030' },
+        { value: 1031, label: '1031' },
+        { value: 1032, label: '1032' },
+        { value: 1033, label: '1033' },
+        { value: 1034, label: '1034' },
+        { value: 1035, label: '1035' },
+        { value: 1036, label: '1036' },
+        { value: 1037, label: '1037' },
+        { value: 1038, label: '1038' },
+        { value: 1039, label: '1039' },
+        { value: 1040, label: '1040' }
       ],
       statusOptions: [
         { value: '活跃', label: '活跃' },
@@ -156,7 +190,10 @@ export default {
     generateMockData() {
       const statusOptions = ['活跃', '待处理', '已完成', '关闭'];
       const genderOptions = ['男', '女', '未知'];
-      const classOptions = [1001, 1002, 1003, 1004, 1005, 1006];
+      const classOptions = [];
+      for (let i = 1001; i <= 1040; i++) {
+        classOptions.push(i);
+      }
       const namePrefix = ['张', '王', '李', '赵', '陈', '刘', '杨', '黄', '周', '吴'];
       const nameSuffix = ['伟', '芳', '娜', '秀英', '敏', '静', '强', '磊', '洋', '艳'];
       const addressPrefix = ['北京市', '上海市', '广州市', '深圳市', '杭州市', '南京市', '武汉市', '成都市', '重庆市', '西安市'];
