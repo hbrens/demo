@@ -22,6 +22,11 @@ const routes = [
     path: '/table-scroll',
     name: 'table-scroll',
     component: () => import('../views/TableScroll.vue')
+  },
+  {
+    path: '/table-filter',
+    name: 'table-filter',
+    component: () => import('../views/TableFilter/index.vue')
   }
 ]
 
