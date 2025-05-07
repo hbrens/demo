@@ -2,7 +2,19 @@
   <el-table-column :prop="prop" :label="label" :width="width">
     <template slot="header" slot-scope="scope">
       <div class="custom-table-header">
-        <span>{{ label }}</span>
+        <div class="header-left">
+          <span>{{ label }}</span>
+          <span class="sort-icons" v-if="sortable">
+            <i 
+              class="el-icon-caret-top" 
+              :class="{ 'active': sortOrder === 'asc' }"
+              @click.stop="handleSort('asc')"></i>
+            <i 
+              class="el-icon-caret-bottom" 
+              :class="{ 'active': sortOrder === 'desc' }"
+              @click.stop="handleSort('desc')"></i>
+          </span>
+        </div>
       
         <el-popover
           placement="bottom"
@@ -72,6 +84,14 @@ export default {
     filterOptions: {
       type: Array,
       default: () => []
+    },
+    sortable: {
+      type: Boolean,
+      default: false
+    },
+    currentSort: {
+      type: Object,
+      default: () => ({})
     }
   },
   data() {
@@ -81,7 +101,20 @@ export default {
       isFiltered: false
     }
   },
+  computed: {
+    sortOrder() {
+      return this.currentSort.prop === this.prop ? this.currentSort.order : '';
+    }
+  },
   methods: {
+    handleSort(order) {
+      // 如果已经是当前排序方式，再次点击取消排序
+      const newOrder = this.sortOrder === order ? '' : order;
+      this.$emit('sort-change', {
+        prop: this.prop,
+        order: newOrder
+      });
+    },
     handleVisibleChange(visible) {
       // 当popover打开时，直接调用子组件方法清空搜索框
       if (visible && this.$refs.filterPopover) {
@@ -124,6 +157,32 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  
+  .header-left {
+    display: flex;
+    align-items: center;
+    
+    .sort-icons {
+      display: flex;
+      flex-direction: column;
+      margin-left: 5px;
+      
+      i {
+        font-size: 12px;
+        color: #C0C4CC;
+        cursor: pointer;
+        height: 10px;
+        
+        &.active {
+          color: #409EFF;
+        }
+        
+        &:hover {
+          color: #409EFF;
+        }
+      }
+    }
+  }
   
   .filter-icon-wrapper {
     cursor: pointer;
