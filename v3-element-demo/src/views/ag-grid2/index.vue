@@ -343,6 +343,17 @@ const setAgeYearFilter = () => {
 // 添加列配置抽屉控制
 const columnConfigDrawerVisible = ref(false);
 
+// 添加当前列配置数据
+const currentColumnConfig = ref([]);
+
+// 打开列配置抽屉前获取最新列状态
+const openColumnConfigDrawer = () => {
+  // 获取最新的列配置
+  currentColumnConfig.value = getColumnConfigData();
+  // 打开抽屉
+  columnConfigDrawerVisible.value = true;
+};
+
 // 处理应用列配置更改
 const handleApplyColumnChanges = (updatedColumnDefs) => {
   console.log('接收到列配置更新请求');
@@ -356,43 +367,23 @@ const handleApplyColumnChanges = (updatedColumnDefs) => {
   try {
     console.log('开始应用列配置更改...');
     
-    // 处理每一列的配置
-    updatedColumnDefs.forEach(col => {
+    // 创建完整的列状态，同时包含可见性、顺序和固定位置
+    const allColumnState = updatedColumnDefs.map(col => {
       const colId = col.field || col.colId;
-      if (!colId) return;
-      
-      try {
-        // 设置列的可见性
-        gridApi.value.setColumnVisible(colId, col.visible);
-        
-        // 设置列的固定位置
-        gridApi.value.setColumnPinned(colId, col.pinned);
-      } catch (err) {
-        console.warn(`设置列 ${colId} 属性时出错:`, err);
-      }
+      return {
+        colId: colId,
+        hide: !col.visible, // AG-Grid使用hide属性
+        pinned: col.pinned || null
+      };
     });
     
-    // 调整列顺序
-    try {
-      const visibleCols = updatedColumnDefs
-        .filter(col => col.visible)
-        .map(col => col.field || col.colId)
-        .filter(Boolean);
-      
-      if (visibleCols.length > 0) {
-        console.log('设置列顺序:', visibleCols);
-        // 使用applyColumnState设置列顺序
-        const columnState = visibleCols.map((colId, index) => ({
-          colId,
-          sort: null,
-          sortIndex: null,
-          pinned: updatedColumnDefs.find(c => (c.field || c.colId) === colId)?.pinned || null
-        }));
-        gridApi.value.applyColumnState({ state: columnState, applyOrder: true });
-      }
-    } catch (err) {
-      console.warn('设置列顺序时出错:', err);
-    }
+    // 一次性应用所有列状态
+    console.log('应用列状态:', allColumnState);
+    gridApi.value.applyColumnState({
+      state: allColumnState,
+      applyOrder: true, // 应用列顺序
+      defaultState: { hide: false } // 默认显示列
+    });
     
     // 刷新表格
     gridApi.value.refreshHeader();
@@ -404,6 +395,9 @@ const handleApplyColumnChanges = (updatedColumnDefs) => {
       visible: col.visible,
       pinned: col.pinned
     }));
+    
+    // 更新当前列配置，确保下次打开抽屉时显示最新状态
+    currentColumnConfig.value = getColumnConfigData();
     
     // 关闭抽屉
     columnConfigDrawerVisible.value = false;
@@ -417,12 +411,33 @@ const handleApplyColumnChanges = (updatedColumnDefs) => {
 
 // 准备完整的列定义数据（包含pinned属性）
 const getColumnConfigData = () => {
-  return columnDefs.value.map(col => ({
-    field: col.field || col.colId,
-    headerName: col.headerName || col.field || col.colId,
-    visible: col.hide !== true, // AG Grid用hide属性表示隐藏，我们转换为visible
-    pinned: col.pinned || null
-  }));
+  // 如果gridApi存在，则从当前表格状态获取列配置
+  if (gridApi.value) {
+    // 获取当前列状态
+    const columnState = gridApi.value.getColumnState();
+    console.log('当前列状态:', columnState);
+    
+    // 将列状态转换为所需的格式
+    return columnState.map(col => {
+      // 查找原始列定义以获取headerName
+      const originalCol = columnDefs.value.find(c => (c.field || c.colId) === col.colId);
+      
+      return {
+        field: col.colId,
+        headerName: originalCol?.headerName || originalCol?.field || col.colId,
+        visible: !col.hide, // 注意这里是取反，因为AG-Grid用hide表示隐藏
+        pinned: col.pinned || null
+      };
+    });
+  } else {
+    // 如果gridApi不存在，则使用原始列定义
+    return columnDefs.value.map(col => ({
+      field: col.field || col.colId,
+      headerName: col.headerName || col.field || col.colId,
+      visible: col.hide !== true, // AG Grid用hide属性表示隐藏，我们转换为visible
+      pinned: col.pinned || null
+    }));
+  }
 };
 
 </script>
@@ -440,10 +455,10 @@ const getColumnConfigData = () => {
 
         <el-button @click="restoreFromHardCoded">设置过滤</el-button>
 
-        <!-- 添加列配置按钮 -->
+        <!-- 添加列配置按钮，修改点击事件为openColumnConfigDrawer -->
         <el-button 
           type="primary" 
-          @click="columnConfigDrawerVisible = true"
+          @click="openColumnConfigDrawer"
         >
           表格列配置
         </el-button>
@@ -471,7 +486,10 @@ const getColumnConfigData = () => {
           :suppressScrollOnNewData="true"
           :defaultColDef="defaultColDef"
           :localeText="localeText"
-          :rowData="rowData">
+          :rowData="rowData"
+          :suppressColumnVirtualisation="true"
+          :suppressColumnMoveAnimation="false"
+          :maintainColumnOrder="true">
         </ag-grid-vue>
       </div>
     </div>
@@ -495,10 +513,10 @@ const getColumnConfigData = () => {
       </template>
     </el-dialog>
 
-    <!-- 添加列配置抽屉 -->
+    <!-- 添加列配置抽屉，把columnDefs属性改为传入currentColumnConfig -->
     <ColumnConfig
       v-model="columnConfigDrawerVisible"
-      :columnDefs="getColumnConfigData()"
+      :columnDefs="currentColumnConfig"
       @applyChanges="handleApplyColumnChanges"
     />
   </div>
