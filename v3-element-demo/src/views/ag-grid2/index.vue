@@ -166,42 +166,6 @@ const columnDefs = ref([
   }
 ]);
 
-// function restoreFromHardCoded() {
-//   const hardcodedFilter = {
-//     age: {
-//       filterType: 'number',
-//       operator: 'OR',
-//       conditions: [
-//         {
-//           type: 'equals',
-//           filter: '20',
-//           filterType: 'number'
-//         },
-//         {
-//           type: 'equals',
-//           filter: '24',
-//           filterType: 'number'
-//         },
-//         {
-//           type: 'equals',
-//           filter: '25',
-//           filterType: 'number'
-//         },
-//         {
-//           type: 'equals',
-//           filter: '30',
-//           filterType: 'number'
-//         },
-//         {
-//           type: 'equals',
-//           filter: '40',
-//           filterType: 'number'
-//         }
-//       ]
-//     }
-//   };
-//   gridApi.value!.setFilterModel(hardcodedFilter);
-// }
 
 
 const onCellValueChanged = (params) => {
@@ -367,8 +331,20 @@ const handleApplyColumnChanges = (updatedColumnDefs) => {
   try {
     console.log('开始应用列配置更改...');
     
+    // 获取原始定义中明确设置为隐藏的列
+    const permanentlyHiddenColumns = columnDefs.value
+      .filter(col => col.hide === true)
+      .map(col => ({
+        colId: col.field || col.colId,
+        hide: true,
+        pinned: col.pinned || null
+      }))
+      .filter(col => col.colId); // 确保colId存在
+    
+    console.log('永久隐藏的列:', permanentlyHiddenColumns);
+    
     // 创建完整的列状态，同时包含可见性、顺序和固定位置
-    const allColumnState = updatedColumnDefs.map(col => {
+    const configuredColumnState = updatedColumnDefs.map(col => {
       const colId = col.field || col.colId;
       return {
         colId: colId,
@@ -376,6 +352,12 @@ const handleApplyColumnChanges = (updatedColumnDefs) => {
         pinned: col.pinned || null
       };
     });
+    
+    // 合并用户配置的列状态和永久隐藏的列状态
+    const allColumnState = [
+      ...configuredColumnState,
+      ...permanentlyHiddenColumns
+    ];
     
     // 一次性应用所有列状态
     console.log('应用列状态:', allColumnState);
@@ -411,32 +393,44 @@ const handleApplyColumnChanges = (updatedColumnDefs) => {
 
 // 准备完整的列定义数据（包含pinned属性）
 const getColumnConfigData = () => {
+  // 获取原始定义中明确设置为隐藏的列ID列表
+  const permanentlyHiddenColumns = columnDefs.value
+    .filter(col => col.hide === true)
+    .map(col => col.field || col.colId)
+    .filter(Boolean);
+  
+  console.log('永久隐藏的列:', permanentlyHiddenColumns);
+  
   // 如果gridApi存在，则从当前表格状态获取列配置
   if (gridApi.value) {
     // 获取当前列状态
     const columnState = gridApi.value.getColumnState();
     console.log('当前列状态:', columnState);
     
-    // 将列状态转换为所需的格式
-    return columnState.map(col => {
-      // 查找原始列定义以获取headerName
-      const originalCol = columnDefs.value.find(c => (c.field || c.colId) === col.colId);
-      
-      return {
-        field: col.colId,
-        headerName: originalCol?.headerName || originalCol?.field || col.colId,
-        visible: !col.hide, // 注意这里是取反，因为AG-Grid用hide表示隐藏
-        pinned: col.pinned || null
-      };
-    });
+    // 将列状态转换为所需的格式，并过滤掉永久隐藏的列
+    return columnState
+      .filter(col => !permanentlyHiddenColumns.includes(col.colId))
+      .map(col => {
+        // 查找原始列定义以获取headerName
+        const originalCol = columnDefs.value.find(c => (c.field || c.colId) === col.colId);
+        
+        return {
+          field: col.colId,
+          headerName: originalCol?.headerName || originalCol?.field || col.colId,
+          visible: !col.hide, // 注意这里是取反，因为AG-Grid用hide表示隐藏
+          pinned: col.pinned || null
+        };
+      });
   } else {
-    // 如果gridApi不存在，则使用原始列定义
-    return columnDefs.value.map(col => ({
-      field: col.field || col.colId,
-      headerName: col.headerName || col.field || col.colId,
-      visible: col.hide !== true, // AG Grid用hide属性表示隐藏，我们转换为visible
-      pinned: col.pinned || null
-    }));
+    // 如果gridApi不存在，则使用原始列定义，过滤掉永久隐藏的列
+    return columnDefs.value
+      .filter(col => col.hide !== true)
+      .map(col => ({
+        field: col.field || col.colId,
+        headerName: col.headerName || col.field || col.colId,
+        visible: true, // 默认显示
+        pinned: col.pinned || null
+      }));
   }
 };
 
