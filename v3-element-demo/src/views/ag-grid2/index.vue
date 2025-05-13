@@ -27,6 +27,7 @@ import {
   themeQuartz,
   CustomEditorModule,
   ColumnApiModule,
+  EventApiModule,
   LargeTextEditorModule,
 } from "ag-grid-community";
 
@@ -45,7 +46,8 @@ ModuleRegistry.registerModules([
   CellStyleModule,
   LargeTextEditorModule,
   RenderApiModule,
-  ColumnApiModule
+  ColumnApiModule,
+  EventApiModule
 ]);
 
 import { AG_GRID_LOCALE_CN } from '@ag-grid-community/locale';
@@ -221,6 +223,74 @@ function restoreFromHardCoded() {
   filterBySelectedAges();
 }
 
+// 添加常量用于存储列配置的key
+const COLUMN_CONFIG_STORAGE_KEY = 'ag-grid-column-config';
+const COLUMN_WIDTH_STORAGE_KEY = 'ag-grid-column-width';
+
+// 保存列配置到localStorage
+const saveColumnConfigToStorage = () => {
+  if (!gridApi.value) return;
+  
+  // 获取当前列状态
+  const columnState = gridApi.value.getColumnState();
+  
+  try {
+    // 保存到localStorage
+    localStorage.setItem(COLUMN_CONFIG_STORAGE_KEY, JSON.stringify(columnState));
+    console.log('列配置已保存到localStorage');
+  } catch (error) {
+    console.error('保存列配置到localStorage失败:', error);
+  }
+};
+
+// 从localStorage加载列配置
+const loadColumnConfigFromStorage = () => {
+  if (!gridApi.value) return false;
+  
+  try {
+    // 从localStorage获取
+    const savedConfig = localStorage.getItem(COLUMN_CONFIG_STORAGE_KEY);
+    if (!savedConfig) return false;
+    
+    const columnState = JSON.parse(savedConfig);
+    console.log('从localStorage加载列配置:', columnState);
+    
+    // 获取当前所有列ID，用于检测新增的列
+    const currentColIds = gridApi.value.getColumnDefs()
+      .map(col => col.field || col.colId)
+      .filter(Boolean);
+    
+    // 过滤出有效的列状态（仅包含当前存在的列）
+    const validColumnState = columnState.filter(col => 
+      currentColIds.includes(col.colId)
+    );
+    
+    // 应用列状态
+    gridApi.value.applyColumnState({
+      state: validColumnState,
+      applyOrder: true,
+      defaultState: { hide: false }
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('从localStorage加载列配置失败:', error);
+    return false;
+  }
+};
+
+// 清除localStorage中的列配置
+const clearColumnConfigStorage = () => {
+  try {
+    localStorage.removeItem(COLUMN_CONFIG_STORAGE_KEY);
+    localStorage.removeItem(COLUMN_WIDTH_STORAGE_KEY);
+    console.log('列配置已从localStorage中清除');
+  } catch (error) {
+    console.error('清除localStorage中的列配置失败:', error);
+  }
+};
+
+// 修改onGridReady函数，加载保存的配置
 const onGridReady = (params) => {
   console.log('表格已准备就绪，初始化API');
   // 保存gridApi
@@ -236,10 +306,41 @@ const onGridReady = (params) => {
     .then((data) => {
       updateData(data);
       console.log('数据加载完成');
+      
+      // 在数据加载完成后，尝试从localStorage加载列配置
+      setTimeout(() => {
+        loadColumnConfigFromStorage();
+      }, 100);
     })
     .catch(error => {
       console.error('获取数据时出错:', error);
     });
+    
+  // 监听列大小改变事件，保存配置
+  gridApi.value.addEventListener('columnResized', (event) => {
+    if (event.finished) {
+      console.log('列大小已改变，保存配置');
+      saveColumnConfigToStorage();
+    }
+  });
+  
+  // 监听列移动事件，保存配置
+  gridApi.value.addEventListener('columnMoved', (event) => {
+    console.log('列顺序已改变，保存配置');
+    saveColumnConfigToStorage();
+  });
+  
+  // 监听列可见性改变事件，保存配置
+  gridApi.value.addEventListener('columnVisible', (event) => {
+    console.log('列可见性已改变，保存配置');
+    saveColumnConfigToStorage();
+  });
+  
+  // 监听列固定状态改变事件，保存配置
+  gridApi.value.addEventListener('columnPinned', (event) => {
+    console.log('列固定状态已改变，保存配置');
+    saveColumnConfigToStorage();
+  });
 };
 
 // 添加切换编辑状态的方法
@@ -381,6 +482,9 @@ const handleApplyColumnChanges = (updatedColumnDefs) => {
     // 更新当前列配置，确保下次打开抽屉时显示最新状态
     currentColumnConfig.value = getColumnConfigData();
     
+    // 保存配置到localStorage
+    saveColumnConfigToStorage();
+    
     // 关闭抽屉
     columnConfigDrawerVisible.value = false;
     
@@ -431,6 +535,45 @@ const getColumnConfigData = () => {
         visible: true, // 默认显示
         pinned: col.pinned || null
       }));
+  }
+};
+
+// 重置所有列配置到默认状态
+const resetAllColumnConfig = () => {
+  if (!gridApi.value) return;
+  
+  try {
+    // 清除localStorage中的配置
+    clearColumnConfigStorage();
+    
+    // 重置列配置到原始定义
+    const defaultColumnState = columnDefs.value.map(col => ({
+      colId: col.field || col.colId,
+      hide: col.hide === true,
+      pinned: col.pinned || null,
+      // 如果原始定义中有宽度，则保留
+      width: col.width
+    })).filter(col => col.colId);
+    
+    // 应用默认列状态
+    gridApi.value.applyColumnState({
+      state: defaultColumnState,
+      applyOrder: true,
+      defaultState: { hide: false }
+    });
+    
+    // 刷新表格
+    gridApi.value.refreshHeader();
+    
+    // 关闭抽屉
+    columnConfigDrawerVisible.value = false;
+    
+    // 更新当前列配置
+    currentColumnConfig.value = getColumnConfigData();
+    
+    console.log('已恢复所有列配置到默认状态');
+  } catch (error) {
+    console.error('恢复默认列配置失败:', error);
   }
 };
 
@@ -512,6 +655,7 @@ const getColumnConfigData = () => {
       v-model="columnConfigDrawerVisible"
       :columnDefs="currentColumnConfig"
       @applyChanges="handleApplyColumnChanges"
+      @resetAll="resetAllColumnConfig"
     />
   </div>
 </template>

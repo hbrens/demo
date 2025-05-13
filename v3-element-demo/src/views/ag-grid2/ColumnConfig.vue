@@ -8,8 +8,11 @@
     >
       <div class="drawer-content">
         <div class="config-header">
-          <el-button type="primary" size="small" @click="applyChanges">应用更改</el-button>
-          <el-button size="small" @click="resetChanges">重置</el-button>
+          <div>
+            <el-button type="primary" size="small" @click="applyChanges">应用更改</el-button>
+            <el-button size="small" @click="resetChanges">重置当前</el-button>
+          </div>
+          <el-button type="danger" size="small" @click="resetAllConfigs">恢复默认设置</el-button>
         </div>
         
         <el-alert
@@ -62,7 +65,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch, defineProps, defineEmits } from 'vue';
-import { ElDrawer, ElButton, ElCheckbox, ElSelect, ElOption, ElScrollbar, ElAlert, ElIcon } from 'element-plus';
+import { ElDrawer, ElButton, ElCheckbox, ElSelect, ElOption, ElScrollbar, ElAlert, ElIcon, ElMessageBox } from 'element-plus';
 import { Operation } from '@element-plus/icons-vue';
 import draggable from 'vuedraggable';
 
@@ -77,7 +80,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['update:modelValue', 'applyChanges']);
+const emit = defineEmits(['update:modelValue', 'applyChanges', 'resetAll']);
 
 // 计算属性：控制抽屉的显示与隐藏
 const visible = computed({
@@ -106,11 +109,29 @@ const applyChanges = () => {
   emit('applyChanges', localColumnDefs.value);
 };
 
-// 重置更改
+// 重置当前更改（只重置到打开抽屉时的状态）
 const resetChanges = () => {
   // 深拷贝以确保不直接修改props
-  console.log('重置列配置到初始状态');
+  console.log('重置列配置到打开抽屉时的状态');
   localColumnDefs.value = JSON.parse(JSON.stringify(props.columnDefs));
+};
+
+// 重置所有配置（恢复到默认设置，包括清除localStorage）
+const resetAllConfigs = () => {
+  ElMessageBox.confirm(
+    '此操作将恢复所有列配置到系统默认值，包括顺序、宽度、可见性和固定位置。是否继续？',
+    '恢复默认设置',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  ).then(() => {
+    console.log('发送恢复默认设置事件');
+    emit('resetAll');
+  }).catch(() => {
+    console.log('用户取消了恢复默认设置');
+  });
 };
 
 // 上移功能 - 只作为拖拽的备选实现
