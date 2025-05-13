@@ -1,0 +1,31 @@
+/* AG-Grid 自定义样式 */
+
+/* 表头单元格样式 - 支持两行自动换行，超出显示省略号 */
+.ag-header-cell-label {
+  white-space: normal !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+}
+
+.ag-header-cell-label .ag-header-cell-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* 最多显示两行 */
+  -webkit-box-orient: vertical;
+  line-height: 1.2em;
+  max-height: 2.4em; /* 两行高度 = 行高 * 2 */
+}
+
+/* 确保表头有足够高度容纳两行文本 */
+.ag-header-row {
+  height: auto !important;
+  min-height: 40px; /* 可根据需要调整 */
+}
+
+/* 优化表头单元格的内边距 */
+.ag-header-cell {
+  padding: 4px 8px;
+} 

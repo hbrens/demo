@@ -120,7 +120,9 @@ const columnDefs = ref([
   // { field: "silver", type: 'editableColumn' },
   {
     field: "sport", 
+    headerName: "涉及到的运动涉及到的运动涉及到的运动",
     type: 'editableColumn',
+    width: 50,
     cellEditor: CustomLargeTextEditor,
     cellEditorPopup: true,
     cellEditorParams: {
@@ -142,6 +144,7 @@ const columnDefs = ref([
   {
     headerName: '操作',
     field: 'action',
+    width: 70,
     editable: false,
     cellRenderer: (params) => {
       const container = document.createElement('div');
@@ -275,7 +278,9 @@ const toggleEditable = () => {
 const defaultColDef = ref({
   filter: true,
   suppressMenuHide: true, // 显示菜单按钮（三个点）
-  
+  // 添加表头样式相关配置
+  wrapHeaderText: true, // 允许表头文字换行
+  autoHeaderHeight: true, // 表头高度自动调整
 })
 
 // 添加列显示控制
@@ -465,4 +470,35 @@ const setAgeYearFilter = () => {
   align-items: center;
   gap: 10px;
 }
+</style>
+
+<style>
+.ag-header-cell-label {
+  white-space: normal !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+}
+
+.ag-header-cell-label .ag-header-cell-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* 最多显示两行 */
+  -webkit-box-orient: vertical;
+  line-height: 1.2em;
+  max-height: 2.4em; /* 两行高度 = 行高 * 2 */
+}
+
+/* 确保表头有足够高度容纳两行文本 */
+.ag-header-row {
+  height: auto !important;
+  min-height: 40px; /* 可根据需要调整 */
+}
+
+/* 优化表头单元格的内边距 */
+.ag-header-cell {
+  padding: 4px 8px;
+} 
 </style>
