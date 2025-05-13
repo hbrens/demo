@@ -6,6 +6,7 @@ import { ElButton, ElCheckbox } from 'element-plus'
 import CustomHeader from './CustomHeader.vue'
 import AthleteEditor from './AthleteEditor.vue'
 import CustomLargeTextEditor from './CustomLargeTextEditor.vue'
+import ColumnConfig from './ColumnConfig.vue'
 
 import {
   ClientSideRowModelApiModule,
@@ -51,7 +52,6 @@ import { AG_GRID_LOCALE_CN } from '@ag-grid-community/locale';
 
 
 const gridApi = shallowRef(null);
-const columnApi = ref(null);
 
 const localeText = ref(AG_GRID_LOCALE_CN);
 
@@ -95,6 +95,7 @@ const columnDefs = ref([
     filterParams: athleteFilterParams,
     headerComponent: CustomHeader,
     editable: false,
+    pinned: 'left',
     onCellDoubleClicked: (params) => {
       if (isEditable.value && params.data.year > 2010) {
         currentEditData.value = {
@@ -257,16 +258,25 @@ function restoreFromHardCoded() {
 }
 
 const onGridReady = (params) => {
+  console.log('表格已准备就绪，初始化API');
+  // 保存gridApi
   gridApi.value = params.api;
-  columnApi.value = params.columnApi;
+  
+  // 记录API状态
+  console.log('gridApi状态:', !!gridApi.value);
+  console.log('gridApi', gridApi.value);
 
-
+  // 获取数据
   fetch("https://www.ag-grid.com/example-assets/olympic-winners.json")
     .then((resp) => resp.json())
     .then((data) => {
-      updateData(data)
+      updateData(data);
+      console.log('数据加载完成');
+    })
+    .catch(error => {
+      console.error('获取数据时出错:', error);
     });
-}
+};
 
 // 添加切换编辑状态的方法
 const toggleEditable = () => {
@@ -285,15 +295,15 @@ const defaultColDef = ref({
 
 // 添加列显示控制
 const visibleColumns = ref(columnDefs.value.map(col => ({
-  field: col.field,
-  headerName: col.headerName || col.field,
-  visible: true
+  field: col.field || col.colId,
+  headerName: col.headerName || col.field || col.colId,
+  visible: col.hide !== true
 })));
 
 // 添加切换列可见性的方法
 const toggleColumnVisibility = (field, visible) => {
   if (gridApi.value) {
-    gridApi.value.setColumnsVisible([field], visible);
+    gridApi.value.setColumnVisible(field, visible);
   }
 };
 
@@ -330,6 +340,91 @@ const setAgeYearFilter = () => {
   }
 };
 
+// 添加列配置抽屉控制
+const columnConfigDrawerVisible = ref(false);
+
+// 处理应用列配置更改
+const handleApplyColumnChanges = (updatedColumnDefs) => {
+  console.log('接收到列配置更新请求');
+
+  if (!gridApi.value) {
+    console.error('API未初始化，请等待表格加载完成');
+    alert('表格尚未完全加载，请稍后再试');
+    return;
+  }
+  
+  try {
+    console.log('开始应用列配置更改...');
+    
+    // 处理每一列的配置
+    updatedColumnDefs.forEach(col => {
+      const colId = col.field || col.colId;
+      if (!colId) return;
+      
+      try {
+        // 设置列的可见性
+        gridApi.value.setColumnVisible(colId, col.visible);
+        
+        // 设置列的固定位置
+        gridApi.value.setColumnPinned(colId, col.pinned);
+      } catch (err) {
+        console.warn(`设置列 ${colId} 属性时出错:`, err);
+      }
+    });
+    
+    // 调整列顺序
+    try {
+      const visibleCols = updatedColumnDefs
+        .filter(col => col.visible)
+        .map(col => col.field || col.colId)
+        .filter(Boolean);
+      
+      if (visibleCols.length > 0) {
+        console.log('设置列顺序:', visibleCols);
+        // 使用applyColumnState设置列顺序
+        const columnState = visibleCols.map((colId, index) => ({
+          colId,
+          sort: null,
+          sortIndex: null,
+          pinned: updatedColumnDefs.find(c => (c.field || c.colId) === colId)?.pinned || null
+        }));
+        gridApi.value.applyColumnState({ state: columnState, applyOrder: true });
+      }
+    } catch (err) {
+      console.warn('设置列顺序时出错:', err);
+    }
+    
+    // 刷新表格
+    gridApi.value.refreshHeader();
+    
+    // 同步visibleColumns并包含pinned信息
+    visibleColumns.value = updatedColumnDefs.map(col => ({
+      field: col.field || col.colId,
+      headerName: col.headerName || col.field || col.colId,
+      visible: col.visible,
+      pinned: col.pinned
+    }));
+    
+    // 关闭抽屉
+    columnConfigDrawerVisible.value = false;
+    
+    console.log('列配置应用完成');
+  } catch (error) {
+    console.error('应用列配置时出错:', error);
+    alert('设置列配置失败，请查看控制台获取详细信息');
+  }
+};
+
+// 准备完整的列定义数据（包含pinned属性）
+const getColumnConfigData = () => {
+  return columnDefs.value.map(col => ({
+    field: col.field || col.colId,
+    headerName: col.headerName || col.field || col.colId,
+    visible: col.hide !== true, // AG Grid用hide属性表示隐藏，我们转换为visible
+    pinned: col.pinned || null
+  }));
+};
+
 </script>
 
 <template>
@@ -345,6 +440,14 @@ const setAgeYearFilter = () => {
 
         <el-button @click="restoreFromHardCoded">设置过滤</el-button>
 
+        <!-- 添加列配置按钮 -->
+        <el-button 
+          type="primary" 
+          @click="columnConfigDrawerVisible = true"
+        >
+          表格列配置
+        </el-button>
+
         <!-- 添加年龄多选控件 -->
         <div class="age-filter">
           <span>年龄筛选：</span>
@@ -355,17 +458,6 @@ const setAgeYearFilter = () => {
             <el-checkbox :label="30">30岁</el-checkbox>
             <el-checkbox :label="40">40岁</el-checkbox>
           </el-checkbox-group>
-        </div>
-
-        <!-- 添加列显示控制区域 -->
-        <div class="column-visibility-controls">
-          <el-checkbox
-            v-for="col in visibleColumns"
-            :key="col.field"
-            v-model="col.visible"
-            @change="(val) => toggleColumnVisibility(col.field, val)"
-            :label="col.headerName"
-          />
         </div>
       </div>
 
@@ -402,6 +494,13 @@ const setAgeYearFilter = () => {
         </span>
       </template>
     </el-dialog>
+
+    <!-- 添加列配置抽屉 -->
+    <ColumnConfig
+      v-model="columnConfigDrawerVisible"
+      :columnDefs="getColumnConfigData()"
+      @applyChanges="handleApplyColumnChanges"
+    />
   </div>
 </template>
 
@@ -429,12 +528,6 @@ const setAgeYearFilter = () => {
       .age-filter {
         display: flex;
         align-items: center;
-        gap: 10px;
-      }
-
-      .column-visibility-controls {
-        display: flex;
-        flex-wrap: wrap;
         gap: 10px;
       }
     }
