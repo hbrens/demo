@@ -3,6 +3,7 @@
 import { ref, shallowRef, onMounted, h, render } from 'vue';
 import { AgGridVue } from 'ag-grid-vue3'
 import { ElButton, ElCheckbox } from 'element-plus'
+import { Loading } from '@element-plus/icons-vue'
 import CustomHeader from './CustomHeader.vue'
 import AthleteEditor from './AthleteEditor.vue'
 import CustomLargeTextEditor from './CustomLargeTextEditor.vue'
@@ -29,6 +30,7 @@ import {
   ColumnApiModule,
   EventApiModule,
   LargeTextEditorModule,
+  GridApi,
 } from "ag-grid-community";
 
 
@@ -53,7 +55,7 @@ ModuleRegistry.registerModules([
 import { AG_GRID_LOCALE_CN } from '@ag-grid-community/locale';
 
 
-const gridApi = shallowRef(null);
+const gridApi = shallowRef<GridApi | null>(null);
 
 const localeText = ref(AG_GRID_LOCALE_CN);
 
@@ -185,29 +187,166 @@ const originalData = ref([]);
 // 添加选中的年龄值数组
 const selectedAges = ref([20, 24, 25, 30, 40]);
 
-// 修改 updateData 函数
-const updateData = (data) => {
-    // 保存原始数据
-    originalData.value = data.slice(0, 1000);
-    
-    // 获取所有唯一的 country 值
-    const uniqueCountries = [...new Set(data.map(item => item.country))].sort();
-    
-    // 更新 country 列的 cellEditorParams
-    const countryCol = columnDefs.value.find(col => col.field === 'country');
-    if (countryCol) {
-      countryCol.cellEditorParams = {
-        values: uniqueCountries
-      };
+// 添加表格加载状态控制
+const tableLoading = ref(true);
+
+// 添加一个辅助函数用于应用列状态并恢复列宽
+const applyColumnStateHelper = (columnState, delayMs = 100, retryTimes = 1) => {
+  if (!columnState || !gridApi.value) return;
+  
+  let retryCount = 0;
+  
+  const applyState = () => {
+    try {
+      console.log(`应用列状态，尝试 ${retryCount + 1}/${retryTimes}`);
+      
+      gridApi.value.applyColumnState({
+        state: columnState,
+        applyOrder: true,
+        defaultState: { hide: false },
+        // @ts-ignore
+        includeProperties: ['width', 'hide', 'pinned', 'sort', 'sortIndex']
+      });
+      
+      gridApi.value.refreshHeader();
+      console.log('列状态应用成功');
+    } catch (e) {
+      console.error('应用列状态出错:', e);
     }
     
-    // 更新表格数据
-    rowData.value = data.slice(0, 1000);
+    retryCount++;
+    if (retryCount < retryTimes) {
+      setTimeout(applyState, delayMs);
+    }
+  };
+  
+  // 首次延迟调用
+  setTimeout(applyState, delayMs);
 };
 
-// 添加手动筛选函数
+// 修改onGridReady函数，使用新的辅助函数
+const onGridReady = (params) => {
+  console.log('表格已准备就绪，初始化API');
+  // 保存gridApi
+  gridApi.value = params.api;
+  
+  // 记录API状态
+  console.log('gridApi状态:', !!gridApi.value);
+
+  // 从localStorage加载配置
+  const configLoaded = loadColumnConfigFromStorage();
+  
+  // 保存当前列状态以便在数据加载后恢复
+  let savedColumnState = null;
+  if (configLoaded) {
+    try {
+      // 使用try-catch避免类型错误导致脚本中断
+      savedColumnState = gridApi.value.getColumnState();
+      console.log('保存当前列状态用于数据加载后恢复:', savedColumnState);
+    } catch (err) {
+      console.error('获取列状态时出错:', err);
+    }
+  }
+  
+  // 获取数据
+  fetch("https://www.ag-grid.com/example-assets/olympic-winners.json")
+    .then((resp) => resp.json())
+    .then((data) => {
+      // 先保存原始数据，但还不设置到表格
+      originalData.value = data.slice(0, 1000);
+      
+      // 获取所有唯一的 country 值
+      const uniqueCountries = [...new Set(data.map(item => item.country))].sort();
+      
+      // 更新 country 列的 cellEditorParams
+      const countryCol = columnDefs.value.find(col => col.field === 'country');
+      if (countryCol) {
+        countryCol.cellEditorParams = {
+          values: uniqueCountries
+        };
+      }
+      
+      // 在配置应用后再设置数据
+      rowData.value = data.slice(0, 1000);
+      
+      // 使用辅助函数应用列状态 - 尝试3次，每次100ms
+      if (savedColumnState) {
+        console.log('数据加载后准备恢复列宽');
+        applyColumnStateHelper(savedColumnState, 100, 3);
+      }
+      
+      console.log('数据加载完成');
+      // 移除加载状态
+      tableLoading.value = false;
+    })
+    .catch(error => {
+      console.error('获取数据时出错:', error);
+      tableLoading.value = false;
+    });
+
+  // 注册事件监听器
+  registerGridEventListeners();
+};
+
+// 单独抽取事件注册函数，使代码更清晰
+const registerGridEventListeners = () => {
+  if (!gridApi.value) return;
+  
+  // 监听列大小改变事件，保存配置
+  gridApi.value.addEventListener('columnResized', (event) => {
+    if (event.finished) {
+      console.log('列大小已改变，保存配置');
+      saveColumnConfigToStorage();
+    }
+  });
+  
+  // 监听列移动事件，保存配置
+  gridApi.value.addEventListener('columnMoved', (event) => {
+    console.log('列顺序已改变，保存配置');
+    saveColumnConfigToStorage();
+  });
+  
+  // 监听列可见性改变事件，保存配置
+  gridApi.value.addEventListener('columnVisible', (event) => {
+    console.log('列可见性已改变，保存配置');
+    saveColumnConfigToStorage();
+  });
+  
+  // 监听列固定状态改变事件，保存配置
+  gridApi.value.addEventListener('columnPinned', (event) => {
+    console.log('列固定状态已改变，保存配置');
+    saveColumnConfigToStorage();
+  });
+};
+
+// 修改updateData函数，不要在这里直接设置rowData
+const updateData = (data) => {
+  // 保存原始数据
+  originalData.value = data.slice(0, 1000);
+  
+  // 获取所有唯一的 country 值
+  const uniqueCountries = [...new Set(data.map(item => item.country))].sort();
+  
+  // 更新 country 列的 cellEditorParams
+  const countryCol = columnDefs.value.find(col => col.field === 'country');
+  if (countryCol) {
+    countryCol.cellEditorParams = {
+      values: uniqueCountries
+    };
+  }
+};
+
+// 修改filterBySelectedAges函数，使用辅助函数
 const filterBySelectedAges = () => {
   if (!originalData.value.length) return;
+  
+  // 保存当前列状态
+  let currentColumnState = null;
+  try {
+    currentColumnState = gridApi.value.getColumnState();
+  } catch (e) {
+    console.error('获取列状态出错:', e);
+  }
   
   // 根据选中的年龄值筛选数据
   const filteredData = originalData.value.filter(item => 
@@ -216,6 +355,12 @@ const filterBySelectedAges = () => {
   
   // 更新表格数据
   rowData.value = filteredData;
+  
+  // 使用辅助函数恢复列宽
+  if (currentColumnState) {
+    console.log('筛选后准备恢复列宽');
+    applyColumnStateHelper(currentColumnState, 100, 2);
+  }
 };
 
 // 修改 restoreFromHardCoded 函数
@@ -225,7 +370,6 @@ function restoreFromHardCoded() {
 
 // 添加常量用于存储列配置的key
 const COLUMN_CONFIG_STORAGE_KEY = 'ag-grid-column-config';
-const COLUMN_WIDTH_STORAGE_KEY = 'ag-grid-column-width';
 
 // 保存列配置到localStorage
 const saveColumnConfigToStorage = () => {
@@ -235,7 +379,7 @@ const saveColumnConfigToStorage = () => {
   const columnState = gridApi.value.getColumnState();
   
   try {
-    // 保存到localStorage
+    // 保存到localStorage - 取消注释以启用持久化存储
     localStorage.setItem(COLUMN_CONFIG_STORAGE_KEY, JSON.stringify(columnState));
     console.log('列配置已保存到localStorage');
   } catch (error) {
@@ -265,13 +409,39 @@ const loadColumnConfigFromStorage = () => {
       currentColIds.includes(col.colId)
     );
     
-    // 应用列状态
-    gridApi.value.applyColumnState({
-      state: validColumnState,
-      applyOrder: true,
-      defaultState: { hide: false }
-    });
+    // 补充默认列配置中有但保存的配置中没有的列
+    const savedColIds = validColumnState.map(col => col.colId);
+    const defaultNewColumns = columnDefs.value
+      .filter(col => {
+        const colId = col.field || col.colId;
+        return colId && !savedColIds.includes(colId) && col.hide !== true;
+      })
+      .map(col => ({
+        colId: col.field || col.colId,
+        hide: false,
+        pinned: col.pinned || null,
+        width: col.width
+      }));
     
+    // 合并有效的保存配置和新增列的默认配置
+    const mergedColumnState = [...validColumnState, ...defaultNewColumns];
+    
+    console.log('合并后的列状态:', mergedColumnState);
+    
+    // 应用列状态，特别确保width属性被正确包含
+    gridApi.value.applyColumnState({
+      state: mergedColumnState,
+      applyOrder: true,
+      defaultState: { hide: false },
+      // 确保包含width属性
+      includeProperties: [ 'hide', 'pinned', 'sort', 'sortIndex']
+    });
+
+    
+    // 确保UI完全刷新
+    gridApi.value.refreshHeader();
+    
+    console.log('列配置已从localStorage恢复');
     return true;
   } catch (error) {
     console.error('从localStorage加载列配置失败:', error);
@@ -283,64 +453,10 @@ const loadColumnConfigFromStorage = () => {
 const clearColumnConfigStorage = () => {
   try {
     localStorage.removeItem(COLUMN_CONFIG_STORAGE_KEY);
-    localStorage.removeItem(COLUMN_WIDTH_STORAGE_KEY);
     console.log('列配置已从localStorage中清除');
   } catch (error) {
     console.error('清除localStorage中的列配置失败:', error);
   }
-};
-
-// 修改onGridReady函数，加载保存的配置
-const onGridReady = (params) => {
-  console.log('表格已准备就绪，初始化API');
-  // 保存gridApi
-  gridApi.value = params.api;
-  
-  // 记录API状态
-  console.log('gridApi状态:', !!gridApi.value);
-  console.log('gridApi', gridApi.value);
-
-  // 获取数据
-  fetch("https://www.ag-grid.com/example-assets/olympic-winners.json")
-    .then((resp) => resp.json())
-    .then((data) => {
-      updateData(data);
-      console.log('数据加载完成');
-      
-      // 在数据加载完成后，尝试从localStorage加载列配置
-      setTimeout(() => {
-        loadColumnConfigFromStorage();
-      }, 100);
-    })
-    .catch(error => {
-      console.error('获取数据时出错:', error);
-    });
-    
-  // 监听列大小改变事件，保存配置
-  gridApi.value.addEventListener('columnResized', (event) => {
-    if (event.finished) {
-      console.log('列大小已改变，保存配置');
-      saveColumnConfigToStorage();
-    }
-  });
-  
-  // 监听列移动事件，保存配置
-  gridApi.value.addEventListener('columnMoved', (event) => {
-    console.log('列顺序已改变，保存配置');
-    saveColumnConfigToStorage();
-  });
-  
-  // 监听列可见性改变事件，保存配置
-  gridApi.value.addEventListener('columnVisible', (event) => {
-    console.log('列可见性已改变，保存配置');
-    saveColumnConfigToStorage();
-  });
-  
-  // 监听列固定状态改变事件，保存配置
-  gridApi.value.addEventListener('columnPinned', (event) => {
-    console.log('列固定状态已改变，保存配置');
-    saveColumnConfigToStorage();
-  });
 };
 
 // 添加切换编辑状态的方法
@@ -432,25 +548,46 @@ const handleApplyColumnChanges = (updatedColumnDefs) => {
   try {
     console.log('开始应用列配置更改...');
     
+    // 获取当前列状态以保存宽度信息
+    const currentState = gridApi.value.getColumnState();
+    const columnWidthMap = {};
+    
+    // 创建列宽度映射 - 这些是当前表格中真实的宽度
+    currentState.forEach(col => {
+      if (col.width) {
+        columnWidthMap[col.colId] = col.width;
+      }
+    });
+    
+    console.log('当前列宽度映射:', columnWidthMap);
+    
     // 获取原始定义中明确设置为隐藏的列
     const permanentlyHiddenColumns = columnDefs.value
       .filter(col => col.hide === true)
-      .map(col => ({
-        colId: col.field || col.colId,
-        hide: true,
-        pinned: col.pinned || null
-      }))
+      .map(col => {
+        const colId = col.field || col.colId;
+        return {
+          colId: colId,
+          hide: true,
+          pinned: col.pinned || null,
+          // 保留宽度信息 - 优先使用当前表格的宽度
+          width: columnWidthMap[colId]
+        };
+      })
       .filter(col => col.colId); // 确保colId存在
     
     console.log('永久隐藏的列:', permanentlyHiddenColumns);
     
-    // 创建完整的列状态，同时包含可见性、顺序和固定位置
+    // 创建完整的列状态，应用用户在抽屉中设置的顺序、可见性和固定位置
+    // 但宽度应该使用当前表格的实际宽度
     const configuredColumnState = updatedColumnDefs.map(col => {
       const colId = col.field || col.colId;
       return {
         colId: colId,
         hide: !col.visible, // AG-Grid使用hide属性
-        pinned: col.pinned || null
+        pinned: col.pinned || null,
+        // 宽度优先使用当前表格的宽度，而非抽屉中的值
+        width: columnWidthMap[colId]
       };
     });
     
@@ -465,7 +602,9 @@ const handleApplyColumnChanges = (updatedColumnDefs) => {
     gridApi.value.applyColumnState({
       state: allColumnState,
       applyOrder: true, // 应用列顺序
-      defaultState: { hide: false } // 默认显示列
+      defaultState: { hide: false }, // 默认显示列
+      // 确保应用宽度
+      includeProperties: ['width', 'hide', 'pinned', 'sort', 'sortIndex']
     });
     
     // 刷新表格
@@ -559,7 +698,9 @@ const resetAllColumnConfig = () => {
     gridApi.value.applyColumnState({
       state: defaultColumnState,
       applyOrder: true,
-      defaultState: { hide: false }
+      defaultState: { hide: false },
+      // 确保应用宽度 - 这是关键
+      includeProperties: ['width', 'hide', 'pinned', 'sort', 'sortIndex']
     });
     
     // 刷新表格
@@ -614,6 +755,13 @@ const resetAllColumnConfig = () => {
       </div>
 
       <div class="grid-content">
+        <!-- 添加表格加载状态遮罩层 -->
+        <div v-if="tableLoading" class="table-loading-mask">
+          <div class="loading-spinner">
+            <el-icon class="is-loading"><Loading /></el-icon>
+            <span>加载中...</span>
+          </div>
+        </div>
         <ag-grid-vue
           style="width: 100%; height: 100%;"
           @grid-ready="onGridReady"
@@ -689,6 +837,37 @@ const resetAllColumnConfig = () => {
     }
     .grid-content {
       flex: 1;
+      position: relative; // 为遮罩层定位做准备
+    }
+  }
+
+  // 添加表格加载遮罩层样式
+  .table-loading-mask {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.7);
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    
+    .loading-spinner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      
+      .el-icon {
+        font-size: 24px;
+        color: #409eff;
+      }
+      
+      span {
+        color: #606266;
+      }
     }
   }
 
