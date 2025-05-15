@@ -1,0 +1,25 @@
+{
+  "files": {
+    "main.css": "./static/css/main.586521cb.chunk.css",
+    "main.js": "./static/js/main.022f7343.chunk.js",
+    "main.js.map": "./static/js/main.022f7343.chunk.js.map",
+    "runtime-main.js": "./static/js/runtime-main.58a54bf5.js",
+    "runtime-main.js.map": "./static/js/runtime-main.58a54bf5.js.map",
+    "static/css/2.e515a48f.chunk.css": "./static/css/2.e515a48f.chunk.css",
+    "static/js/2.1d5865fd.chunk.js": "./static/js/2.1d5865fd.chunk.js",
+    "static/js/2.1d5865fd.chunk.js.map": "./static/js/2.1d5865fd.chunk.js.map",
+    "index.html": "./index.html",
+    "precache-manifest.c175dbd104779080b92cf8368a991794.js": "./precache-manifest.c175dbd104779080b92cf8368a991794.js",
+    "service-worker.js": "./service-worker.js",
+    "static/css/2.e515a48f.chunk.css.map": "./static/css/2.e515a48f.chunk.css.map",
+    "static/css/main.586521cb.chunk.css.map": "./static/css/main.586521cb.chunk.css.map",
+    "static/media/style.scss": "./static/media/new_logan_logo_white.6ea001ee.png"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.58a54bf5.js",
+    "static/css/2.e515a48f.chunk.css",
+    "static/js/2.1d5865fd.chunk.js",
+    "static/css/main.586521cb.chunk.css",
+    "static/js/main.022f7343.chunk.js"
+  ]
+}
