@@ -30,6 +30,20 @@
       }
     },
     {
+      "path": "/search",
+      "name": "search",
+      "component": "/search/index",
+      "meta": {
+        "icon": "Histogram",
+        "title": "资源池",
+        "isLink": "",
+        "isHide": false,
+        "isFull": false,
+        "isAffix": false,
+        "isKeepAlive": true
+      }
+    },
+    {
       "path": "/proTable",
       "name": "proTable",
       "redirect": "/proTable/useProTable",
