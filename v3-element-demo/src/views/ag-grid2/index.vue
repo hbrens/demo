@@ -2,7 +2,7 @@
 
 import { ref, shallowRef, onMounted, h, render } from 'vue';
 import { AgGridVue } from 'ag-grid-vue3'
-import { ElButton, ElCheckbox } from 'element-plus'
+import { ElButton, ElCheckbox, ElMessage } from 'element-plus'
 import { Loading } from '@element-plus/icons-vue'
 import CustomHeader from './CustomHeader.vue'
 import AthleteEditor from './AthleteEditor.vue'
@@ -30,6 +30,8 @@ import {
   ColumnApiModule,
   EventApiModule,
   LargeTextEditorModule,
+  PinnedRowModule,
+  RowSelectionModule,
   GridApi,
 } from "ag-grid-community";
 
@@ -49,7 +51,9 @@ ModuleRegistry.registerModules([
   LargeTextEditorModule,
   RenderApiModule,
   ColumnApiModule,
-  EventApiModule
+  EventApiModule,
+  PinnedRowModule,
+  RowSelectionModule,
 ]);
 
 import { AG_GRID_LOCALE_CN } from '@ag-grid-community/locale';
@@ -93,6 +97,12 @@ const currentEditData = ref({
 });
 
 const columnDefs = ref([
+  {
+    headerName: '',
+    checkboxSelection: true,
+    width: 40,
+    pinned: 'left'
+  },
   { 
     field: "athlete", 
     type: 'editableColumn', 
@@ -253,7 +263,7 @@ const onGridReady = (params) => {
     .then((resp) => resp.json())
     .then((data) => {
       // 先保存原始数据，但还不设置到表格
-      originalData.value = data.slice(0, 1000);
+      originalData.value = data.slice(0, 20);
       
       // 获取所有唯一的 country 值
       const uniqueCountries = [...new Set(data.map(item => item.country))].sort();
@@ -267,7 +277,7 @@ const onGridReady = (params) => {
       }
       
       // 在配置应用后再设置数据
-      rowData.value = data.slice(0, 1000);
+      rowData.value = data.slice(0, 20);
       
       // 使用辅助函数应用列状态 - 尝试3次，每次100ms
       if (savedColumnState) {
@@ -718,6 +728,37 @@ const resetAllColumnConfig = () => {
   }
 };
 
+const pinnedTopRows = ref<any[]>([]);
+
+const pinTopRow = () => {
+  if (!gridApi.value) return;
+  const selectedNodes = gridApi.value.getSelectedNodes();
+  if (selectedNodes.length === 0) {
+    ElMessage.warning('请先选择要置顶的行');
+    return;
+  }
+  const selectedData = selectedNodes.map(node => node.data);
+  // 过滤掉已置顶的数据
+  const newPinned = selectedData.filter(
+    d => !pinnedTopRows.value.includes(d)
+  );
+  // 添加到 pinnedTopRows
+  pinnedTopRows.value = [...pinnedTopRows.value, ...newPinned];
+  // 从 rowData 里移除这些数据
+  rowData.value = rowData.value.filter(
+    d => !pinnedTopRows.value.includes(d)
+  );
+  ElMessage.success('置顶成功');
+};
+
+const unpinAllTopRows = () => {
+  // 把置顶的数据加回 rowData
+  rowData.value = [...pinnedTopRows.value, ...rowData.value];
+  // 清空 pinnedTopRows
+  pinnedTopRows.value = [];
+  ElMessage.success('已取消全部置顶');
+};
+
 </script>
 
 <template>
@@ -752,6 +793,9 @@ const resetAllColumnConfig = () => {
             <el-checkbox :label="40">40岁</el-checkbox>
           </el-checkbox-group>
         </div>
+
+        <el-button type="success" @click="pinTopRow">置顶选中行</el-button>
+        <el-button type="info" @click="unpinAllTopRows">取消全部置顶</el-button>
       </div>
 
       <div class="grid-content">
@@ -774,7 +818,10 @@ const resetAllColumnConfig = () => {
           :rowData="rowData"
           :suppressColumnVirtualisation="true"
           :suppressColumnMoveAnimation="false"
-          :maintainColumnOrder="true">
+          :maintainColumnOrder="true"
+          :pinnedTopRowData="pinnedTopRows"
+          rowSelection="multiple"
+          :suppressRowClickSelection="true">
         </ag-grid-vue>
       </div>
     </div>
