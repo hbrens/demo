@@ -80,7 +80,7 @@ const athleteFilterParams = {
 }
 
 const onDeleteRow = (params) => {
-  console.log(params, 'delete')
+  // ... existing code ...
 }
 
 const columnTypes = ref({
@@ -95,13 +95,26 @@ const currentEditData = ref({
   rowIndex: null,
   athlete: ''
 });
+const handlePinnedCellDoubleClick = (params) => {
+  // 判断是否为置顶行
+  if (params.node.rowPinned === 'top') {
+    // 获取id（假设有id字段，没有就用athlete或其他唯一字段）
+    const id = params.node.id || params.data.athlete;
+    const field = params.colDef.field;
+    const value = params.value;
+    // 这里可以弹窗，或者先console
+    console.log('置顶行双击', { id, field, value, data: params.data });
+    console.log(params.node, 'params.node')
+    // TODO: 打开el-dialog并传递这些信息
+  }
+};
 
 const columnDefs = ref([
   {
     headerName: '',
     checkboxSelection: true,
     width: 40,
-    pinned: 'left'
+    pinned: 'left',
   },
   { 
     field: "athlete", 
@@ -111,13 +124,14 @@ const columnDefs = ref([
     editable: false,
     pinned: 'left',
     onCellDoubleClicked: (params) => {
-      if (isEditable.value && params.data.year > 2010) {
-        currentEditData.value = {
-          rowIndex: params.rowIndex,
-          athlete: params.value
-        };
-        dialogVisible.value = true;
-      }
+      handlePinnedCellDoubleClick(params)
+      // if (isEditable.value && params.data.year > 2010) {
+      //   currentEditData.value = {
+      //     rowIndex: params.rowIndex,
+      //     athlete: params.value
+      //   };
+      //   dialogVisible.value = true;
+      // }
     }
   },
   { field: "age", type: 'editableColumn' },
@@ -183,13 +197,7 @@ const columnDefs = ref([
 
 
 const onCellValueChanged = (params) => {
-  console.log('单元格数据已更改:', {
-    行索引: params.rowIndex,
-    列名: params.colDef.field,
-    旧值: params.oldValue,
-    新值: params.value,
-    行数据: params.data
-  })
+  // ... existing code ...
 }
 
 // 添加原始数据存储
@@ -219,9 +227,7 @@ const applyColumnStateHelper = (columnState, delayMs = 100, retryTimes = 1) => {
       });
       
       gridApi.value.refreshHeader();
-      console.log('列状态应用成功');
     } catch (e) {
-      console.error('应用列状态出错:', e);
     }
     
     retryCount++;
@@ -236,7 +242,6 @@ const applyColumnStateHelper = (columnState, delayMs = 100, retryTimes = 1) => {
 
 // 修改onGridReady函数，使用新的辅助函数
 const onGridReady = (params) => {
-  console.log('表格已准备就绪，初始化API');
   // 保存gridApi
   gridApi.value = params.api;
   
@@ -252,9 +257,7 @@ const onGridReady = (params) => {
     try {
       // 使用try-catch避免类型错误导致脚本中断
       savedColumnState = gridApi.value.getColumnState();
-      console.log('保存当前列状态用于数据加载后恢复:', savedColumnState);
     } catch (err) {
-      console.error('获取列状态时出错:', err);
     }
   }
   
@@ -264,7 +267,7 @@ const onGridReady = (params) => {
     .then((data) => {
       // 先保存原始数据，但还不设置到表格
       originalData.value = data.slice(0, 20);
-      
+      pinnedTopRows.value = data.slice(40, 43);
       // 获取所有唯一的 country 值
       const uniqueCountries = [...new Set(data.map(item => item.country))].sort();
       
@@ -281,16 +284,13 @@ const onGridReady = (params) => {
       
       // 使用辅助函数应用列状态 - 尝试3次，每次100ms
       if (savedColumnState) {
-        console.log('数据加载后准备恢复列宽');
         applyColumnStateHelper(savedColumnState, 100, 3);
       }
       
-      console.log('数据加载完成');
       // 移除加载状态
       tableLoading.value = false;
     })
     .catch(error => {
-      console.error('获取数据时出错:', error);
       tableLoading.value = false;
     });
 
@@ -305,26 +305,22 @@ const registerGridEventListeners = () => {
   // 监听列大小改变事件，保存配置
   gridApi.value.addEventListener('columnResized', (event) => {
     if (event.finished) {
-      console.log('列大小已改变，保存配置');
       saveColumnConfigToStorage();
     }
   });
   
   // 监听列移动事件，保存配置
   gridApi.value.addEventListener('columnMoved', (event) => {
-    console.log('列顺序已改变，保存配置');
     saveColumnConfigToStorage();
   });
   
   // 监听列可见性改变事件，保存配置
   gridApi.value.addEventListener('columnVisible', (event) => {
-    console.log('列可见性已改变，保存配置');
     saveColumnConfigToStorage();
   });
   
   // 监听列固定状态改变事件，保存配置
   gridApi.value.addEventListener('columnPinned', (event) => {
-    console.log('列固定状态已改变，保存配置');
     saveColumnConfigToStorage();
   });
 };
@@ -355,7 +351,6 @@ const filterBySelectedAges = () => {
   try {
     currentColumnState = gridApi.value.getColumnState();
   } catch (e) {
-    console.error('获取列状态出错:', e);
   }
   
   // 根据选中的年龄值筛选数据
@@ -368,7 +363,6 @@ const filterBySelectedAges = () => {
   
   // 使用辅助函数恢复列宽
   if (currentColumnState) {
-    console.log('筛选后准备恢复列宽');
     applyColumnStateHelper(currentColumnState, 100, 2);
   }
 };
@@ -759,10 +753,33 @@ const unpinAllTopRows = () => {
   ElMessage.success('已取消全部置顶');
 };
 
+// 新增：修改指定置顶行 year 字段的函数
+defineExpose();
+const updatePinnedRowYear = () => {
+  // 获取pinnedTopRows中的数据
+  // 由于pinnedTopRows.value只是数据数组，没有node信息，需要通过gridApi获取rowNode
+  if (!gridApi.value) return;
+  // 获取所有pinnedTop rowNode
+  const pinnedNodes = gridApi.value.getPinnedTopRowCount && gridApi.value.getPinnedTopRowCount() > 0
+    ? Array.from({ length: gridApi.value.getPinnedTopRowCount() }, (_, i) => gridApi.value.getPinnedTopRow(i))
+    : [];
+  // 查找id为't-1'的node
+  const targetNode = pinnedNodes.find(node => node && node.id === 't-1');
+  if (targetNode) {
+    // 修改year字段
+    targetNode.setDataValue('year', 2025);
+    ElMessage.success('已将id为t-1的置顶行year改为2025');
+  } else {
+    ElMessage.warning('未找到id为t-1的置顶行');
+  }
+};
+
 </script>
 
 <template>
   <div class="grid-page">
+    <!-- 新增：顶部按钮 -->
+    <el-button type="primary" @click="updatePinnedRowYear" style="margin-bottom: 10px;">修改id为t-1的置顶行year为2025</el-button>
     <div class="grid-container card">
       <div class="grid-header">
         <el-button 
