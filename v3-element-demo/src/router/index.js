@@ -24,6 +24,11 @@ const routes = [
     path: '/ag-grid2',
     name: 'ag-grid2',
     component: () => import('@/views/ag-grid2/index.vue')
+  },
+  {
+    path: '/el-table',
+    name: 'el-table',
+    component: () => import('@/views/el-table-view/index.vue')
   }
 
 ]

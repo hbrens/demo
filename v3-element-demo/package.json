@@ -17,11 +17,14 @@
     "ag-grid-community": "^33.2.2",
     "ag-grid-vue3": "^33.2.2",
     "element-plus": "^2.8.2",
+    "exceljs": "^4.4.0",
+    "file-saver": "^2.0.5",
     "konva": "^9.3.15",
     "normalize.css": "^8.0.1",
     "vue": "^3.4.37",
     "vue-router": "4",
-    "vuedraggable": "^4.1.0"
+    "vuedraggable": "^4.1.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.1.2",
