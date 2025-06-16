@@ -44,8 +44,8 @@
       }
     },
     {
-      "path": "/search",
-      "name": "search",
+      "path": "/profile",
+      "name": "profile",
       "component": "/search/profile",
       "meta": {
         "icon": "Histogram",

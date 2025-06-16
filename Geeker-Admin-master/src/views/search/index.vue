@@ -92,11 +92,13 @@
         <!-- 表格内容后续添加 -->
       </div>
     </div>
+    <GroupUserAddDialog />
   </div>
 </template>
 
 <script setup lang="ts">
 import { reactive } from 'vue'
+import GroupUserAddDialog from './componets/GroupUserAddDialog.vue'
 
 // 搜索表单数据
 const searchForm = reactive({
