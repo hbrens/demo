@@ -8,6 +8,8 @@ import CustomHeader from './CustomHeader.vue'
 import AthleteEditor from './AthleteEditor.vue'
 import CustomLargeTextEditor from './CustomLargeTextEditor.vue'
 import ColumnConfig from './ColumnConfig.vue'
+import CountrySelectEditor from './CountrySelectEditor.vue'
+import CountryAutocompleteEditor from './CountryAutocompleteEditor.vue'
 
 import {
   ClientSideRowModelApiModule,
@@ -138,9 +140,9 @@ const columnDefs = ref([
   { 
     field: "country",
     type: 'editableColumn',
-    cellEditor: 'agSelectCellEditor',
+    cellEditor: CountryAutocompleteEditor,
     cellEditorParams: {
-        values: ['English', 'Spanish', 'French', 'Portuguese', '(other)'],
+      values: ['English', 'Spanish', 'French', 'Portuguese', '(other)'],
     },
   },
   { field: "year", type: 'editableColumn' },
