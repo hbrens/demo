@@ -7,6 +7,7 @@ import { Loading } from '@element-plus/icons-vue'
 import CustomHeader from './CustomHeader.vue'
 import AthleteEditor from './AthleteEditor.vue'
 import CustomLargeTextEditor from './CustomLargeTextEditor.vue'
+import CustomHobbyTagEditor from './CustomHobbyTagEditor.vue'
 import ColumnConfig from './ColumnConfig.vue'
 import CountrySelectEditor from './CountrySelectEditor.vue'
 import CountryAutocompleteEditor from './CountryAutocompleteEditor.vue'
@@ -65,7 +66,7 @@ const gridApi = shallowRef<GridApi | null>(null);
 
 const localeText = ref(AG_GRID_LOCALE_CN);
 
-const rowData = ref([]);
+const rowData = ref<any[]>([]);
 
 // 添加编辑状态控制
 const isEditable = ref(true);
@@ -162,6 +163,19 @@ const columnDefs = ref([
       cols: 50            // 文本框列数
     }
   },
+  // 新增 hobby 列
+  {
+    field: "hobby",
+    headerName: "爱好",
+    type: 'editableColumn',
+    width: 120,
+    valueGetter: (params) => {
+      // hobby为数组，显示时用逗号拼接
+      return Array.isArray(params.data.hobby) ? params.data.hobby.join(', ') : params.data.hobby || '';
+    },
+    cellEditor: CustomHobbyTagEditor,
+    cellEditorPopup: true,
+  },
   // { field: "total", type: 'editableColumn' },
   {
     headerName: "年龄和年份", 
@@ -199,11 +213,9 @@ const columnDefs = ref([
 
 
 const onCellValueChanged = (params) => {
-  // ... existing code ...
+  console.log(params.value, params.oldValue, 'params')
 }
 
-// 添加原始数据存储
-const originalData = ref([]);
 // 添加选中的年龄值数组
 const selectedAges = ref([20, 24, 25, 30, 40]);
 
@@ -267,14 +279,30 @@ const onGridReady = (params) => {
   fetch("https://www.ag-grid.com/example-assets/olympic-winners.json")
     .then((resp) => resp.json())
     .then((data) => {
+      // mock hobby 字段
+      const hobbyList = [
+        ['游泳', '阅读'],
+        ['足球', '音乐'],
+        ['篮球', '旅行'],
+        ['羽毛球', '美食'],
+        ['跑步', '摄影'],
+        ['乒乓球', '电影'],
+        ['爬山', '绘画'],
+        ['健身', '写作'],
+        ['象棋', '编程'],
+        ['跳舞', '钓鱼'],
+      ];
+      data.forEach((item, idx) => {
+        // 随机分配一个hobby数组
+        item.hobby = hobbyList[idx % hobbyList.length];
+      });
       // 先保存原始数据，但还不设置到表格
-      originalData.value = data.slice(0, 20);
       pinnedTopRows.value = data.slice(40, 43);
       // 获取所有唯一的 country 值
       const uniqueCountries = [...new Set(data.map(item => item.country))].sort();
       
       // 更新 country 列的 cellEditorParams
-      const countryCol = columnDefs.value.find(col => col.field === 'country');
+      const countryCol = columnDefs.value.find(col => (col as any).field === 'country');
       if (countryCol) {
         countryCol.cellEditorParams = {
           values: uniqueCountries
@@ -329,14 +357,11 @@ const registerGridEventListeners = () => {
 
 // 修改updateData函数，不要在这里直接设置rowData
 const updateData = (data) => {
-  // 保存原始数据
-  originalData.value = data.slice(0, 1000);
-  
   // 获取所有唯一的 country 值
   const uniqueCountries = [...new Set(data.map(item => item.country))].sort();
   
   // 更新 country 列的 cellEditorParams
-  const countryCol = columnDefs.value.find(col => col.field === 'country');
+  const countryCol = columnDefs.value.find(col => (col as any).field === 'country');
   if (countryCol) {
     countryCol.cellEditorParams = {
       values: uniqueCountries
@@ -346,7 +371,7 @@ const updateData = (data) => {
 
 // 修改filterBySelectedAges函数，使用辅助函数
 const filterBySelectedAges = () => {
-  if (!originalData.value.length) return;
+  if (!rowData.value.length) return;
   
   // 保存当前列状态
   let currentColumnState = null;
@@ -356,7 +381,7 @@ const filterBySelectedAges = () => {
   }
   
   // 根据选中的年龄值筛选数据
-  const filteredData = originalData.value.filter(item => 
+  const filteredData = rowData.value.filter((item: any) => 
     selectedAges.value.includes(item.age)
   );
   
@@ -419,15 +444,19 @@ const loadColumnConfigFromStorage = () => {
     const savedColIds = validColumnState.map(col => col.colId);
     const defaultNewColumns = columnDefs.value
       .filter(col => {
-        const colId = col.field || col.colId;
-        return colId && !savedColIds.includes(colId) && col.hide !== true;
+        const c = col as any;
+        const colId = c.field || c.colId;
+        return colId && !savedColIds.includes(colId) && c.hide !== true;
       })
-      .map(col => ({
-        colId: col.field || col.colId,
-        hide: false,
-        pinned: col.pinned || null,
-        width: col.width
-      }));
+      .map(col => {
+        const c = col as any;
+        return {
+          colId: c.field || c.colId,
+          hide: false,
+          pinned: c.pinned || null,
+          width: c.width
+        };
+      });
     
     // 合并有效的保存配置和新增列的默认配置
     const mergedColumnState = [...validColumnState, ...defaultNewColumns];
@@ -481,11 +510,14 @@ const defaultColDef = ref({
 })
 
 // 添加列显示控制
-const visibleColumns = ref(columnDefs.value.map(col => ({
-  field: col.field || col.colId,
-  headerName: col.headerName || col.field || col.colId,
-  visible: col.hide !== true
-})));
+const visibleColumns = ref(columnDefs.value.map(col => {
+  const c = col as any;
+  return {
+    field: c.field || c.colId,
+    headerName: c.headerName || c.field || c.colId,
+    visible: c.hide !== true
+  };
+}));
 
 // 添加切换列可见性的方法
 const toggleColumnVisibility = (field, visible) => {
@@ -673,13 +705,16 @@ const getColumnConfigData = () => {
   } else {
     // 如果gridApi不存在，则使用原始列定义，过滤掉永久隐藏的列
     return columnDefs.value
-      .filter(col => col.hide !== true)
-      .map(col => ({
-        field: col.field || col.colId,
-        headerName: col.headerName || col.field || col.colId,
-        visible: true, // 默认显示
-        pinned: col.pinned || null
-      }));
+      .filter(col => (col as any).hide !== true)
+      .map(col => {
+        const c = col as any;
+        return {
+          field: c.field || c.colId,
+          headerName: c.headerName || c.field || c.colId,
+          visible: true, // 默认显示
+          pinned: c.pinned || null
+        };
+      });
   }
 };
 
