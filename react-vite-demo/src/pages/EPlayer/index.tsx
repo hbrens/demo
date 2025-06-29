@@ -1,8 +1,18 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import EPLayerLayout from './Components/EPLayerLayout'
+import { initializeMockData, initializeStoreConnections } from '../../stores'
 
 function EPlayer() {
+  // 初始化store和数据
+  useEffect(() => {
+    // 初始化store联动
+    initializeStoreConnections()
+    
+    // 初始化模拟数据
+    initializeMockData()
+  }, [])
+
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* 顶部导航 */}
