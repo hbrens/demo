@@ -1,7 +1,6 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react'
-import { Stage, Layer, Image, Group, Rect } from 'react-konva'
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import cn from 'classnames'
-import { useImageViewerStore, useEPlayerStore } from '../../../../stores'
+import { useImageViewerStore, useEPlayerStore } from '@/stores'
 import styles from './ImageViewer.module.less'
 
 interface ImageViewerProps {
@@ -20,55 +19,201 @@ interface ImageWindowProps {
   isBottomWindow: boolean
 }
 
-// 自定义 hook 处理 Konva Stage 的响应式尺寸
-const useKonvaStage = (containerRef: React.RefObject<HTMLDivElement | null>) => {
-  const [size, setSize] = useState({ width: 0, height: 0 })
-  const stageRef = useRef<any>(null)
+// 图片缓存
+const imageCache = new Map<string, HTMLImageElement>()
 
-  const updateSize = useCallback(() => {
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect()
-      const newSize = { width: rect.width, height: rect.height }
-      
-      if (newSize.width !== size.width || newSize.height !== size.height) {
-        setSize(newSize)
-        
-        // 直接设置 Stage 尺寸
-        if (stageRef.current) {
-          stageRef.current.width(newSize.width)
-          stageRef.current.height(newSize.height)
-          stageRef.current.batchDraw()
-        }
-      }
+// 预加载队列
+const preloadQueue = new Set<string>()
+
+// 性能监控
+const performanceStats = {
+  cacheHits: 0,
+  cacheMisses: 0,
+  totalLoads: 0
+}
+
+// 获取性能统计
+const getPerformanceStats = () => {
+  return {
+    ...performanceStats,
+    cacheSize: imageCache.size,
+    preloadQueueSize: preloadQueue.size,
+    hitRate: performanceStats.totalLoads > 0 ? (performanceStats.cacheHits / performanceStats.totalLoads * 100).toFixed(1) : '0'
+  }
+}
+
+// 预加载图片
+const preloadImage = (url: string) => {
+  if (imageCache.has(url) || preloadQueue.has(url)) return
+  
+  preloadQueue.add(url)
+  const img = new window.Image()
+  img.crossOrigin = 'anonymous'
+  
+  img.onload = () => {
+    imageCache.set(url, img)
+    preloadQueue.delete(url)
+  }
+  
+  img.onerror = () => {
+    preloadQueue.delete(url)
+  }
+  
+  img.src = url
+}
+
+// 防抖函数
+const debounce = (func: Function, wait: number) => {
+  let timeout: NodeJS.Timeout
+  return function executedFunction(...args: any[]) {
+    const later = () => {
+      clearTimeout(timeout)
+      func(...args)
     }
-  }, [containerRef, size.width, size.height])
+    clearTimeout(timeout)
+    timeout = setTimeout(later, wait)
+  }
+}
+
+// 图片加载 hook
+const useImageLoader = (imageUrl: string) => {
+  const [imageElement, setImageElement] = useState<HTMLImageElement | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!containerRef.current) return
-
-    // 初始设置
-    const initTimer = setTimeout(updateSize, 50)
-
-    // ResizeObserver
-    const resizeObserver = new ResizeObserver(() => {
-      requestAnimationFrame(updateSize)
-    })
-    resizeObserver.observe(containerRef.current)
-
-    // 窗口 resize
-    const handleResize = () => {
-      setTimeout(updateSize, 100)
+    if (!imageUrl) {
+      setError('图片URL为空')
+      setIsLoading(false)
+      return
     }
-    window.addEventListener('resize', handleResize)
+
+    performanceStats.totalLoads++
+
+    // 检查缓存
+    if (imageCache.has(imageUrl)) {
+      performanceStats.cacheHits++
+      setImageElement(imageCache.get(imageUrl)!)
+      setIsLoading(false)
+      return
+    }
+
+    performanceStats.cacheMisses++
+    setIsLoading(true)
+    setError(null)
+
+    const img = new window.Image()
+    img.crossOrigin = 'anonymous'
+    
+    // 设置加载超时
+    const timeoutId = setTimeout(() => {
+      setError('图片加载超时')
+      setIsLoading(false)
+    }, 5000) // 5秒超时
+    
+    img.onload = () => {
+      clearTimeout(timeoutId)
+      // 缓存图片
+      imageCache.set(imageUrl, img)
+      setImageElement(img)
+      setIsLoading(false)
+    }
+    
+    img.onerror = () => {
+      clearTimeout(timeoutId)
+      setError('图片加载失败')
+      setIsLoading(false)
+      console.error('图片加载失败:', imageUrl)
+    }
+    
+    img.src = imageUrl
 
     return () => {
-      clearTimeout(initTimer)
-      resizeObserver.disconnect()
-      window.removeEventListener('resize', handleResize)
+      clearTimeout(timeoutId)
+      img.onload = null
+      img.onerror = null
     }
-  }, [updateSize])
+  }, [imageUrl])
 
-  return { size, stageRef, updateSize }
+  return { imageElement, isLoading, error }
+}
+
+// 生成更好的图片URL
+const generateImageUrl = (image: any, size: 'thumbnail' | 'full' = 'full') => {
+  // 如果有缩略图，优先使用
+  if (image.thumbnail) {
+    return image.thumbnail
+  }
+  
+  // 如果有路径，尝试使用本地路径
+  if (image.path) {
+    return image.path
+  }
+  
+  // 直接使用最稳定的图片服务
+  const width = size === 'thumbnail' ? 150 : 800
+  const height = size === 'thumbnail' ? 150 : 600
+  
+  // 使用 placeholder.com，最稳定
+  return `https://via.placeholder.com/${width}x${height}/f0f0f0/666666?text=${encodeURIComponent(image.name || 'Image')}`
+}
+
+// 生成本地Canvas图片（更快）
+const generateLocalImage = (image: any, size: 'thumbnail' | 'full' = 'full') => {
+  const width = size === 'thumbnail' ? 150 : 800
+  const height = size === 'thumbnail' ? 150 : 600
+  
+  // 创建Canvas
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')
+  
+  if (!ctx) return null
+  
+  // 绘制白色背景
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, width, height)
+  
+  // 绘制渐变背景
+  const gradient = ctx.createLinearGradient(0, 0, width, height)
+  gradient.addColorStop(0, '#f8f9fa')
+  gradient.addColorStop(0.5, '#e9ecef')
+  gradient.addColorStop(1, '#dee2e6')
+  ctx.fillStyle = gradient
+  ctx.fillRect(0, 0, width, height)
+  
+  // 绘制图片图标
+  ctx.fillStyle = '#6c757d'
+  ctx.font = `${Math.min(width, height) / 8}px Arial`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  
+  // 绘制图片名称
+  const text = image.name || `图片 ${image.id}`
+  const maxWidth = width * 0.8
+  const fontSize = Math.min(width, height) / 10
+  
+  // 如果文字太长，截断
+  let displayText = text
+  if (ctx.measureText(text).width > maxWidth) {
+    displayText = text.substring(0, Math.floor(maxWidth / fontSize * 2)) + '...'
+  }
+  
+  ctx.font = `${fontSize}px Arial`
+  ctx.fillText(displayText, width / 2, height / 2)
+  
+  // 绘制边框
+  ctx.strokeStyle = '#adb5bd'
+  ctx.lineWidth = 1
+  ctx.strokeRect(0, 0, width, height)
+  
+  // 绘制内边框
+  ctx.strokeStyle = '#ced4da'
+  ctx.lineWidth = 1
+  ctx.strokeRect(2, 2, width - 4, height - 4)
+  
+  return canvas.toDataURL('image/png', 0.9)
 }
 
 const ImageWindow: React.FC<ImageWindowProps> = ({
@@ -82,34 +227,49 @@ const ImageWindow: React.FC<ImageWindowProps> = ({
   onDrag,
   isBottomWindow
 }) => {
-  const [imageElement, setImageElement] = useState<HTMLImageElement | null>(null)
-  const [isInitialized, setIsInitialized] = useState(false)
-  const contentRef = useRef<HTMLDivElement>(null)
-  const { size, stageRef, updateSize } = useKonvaStage(contentRef)
+  const [isCtrlPressed, setIsCtrlPressed] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0, windowX: 0, windowY: 0 })
+  const [needsCentering, setNeedsCentering] = useState(true)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const imgRef = useRef<HTMLImageElement>(null)
+  
+  // 使用优化的图片加载
+  const imageUrl = generateImageUrl(imgWindow.image, 'full')
+  const { imageElement, isLoading, error } = useImageLoader(imageUrl)
 
+  // 监听Ctrl键状态
   useEffect(() => {
-    const img = new window.Image()
-    img.crossOrigin = 'anonymous'
-    img.onload = () => {
-      setImageElement(img)
-      // 图片加载完成后更新尺寸
-      setTimeout(updateSize, 10)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Control') {
+        setIsCtrlPressed(true)
+      }
     }
-    img.src = imgWindow.image.thumbnail || `https://picsum.photos/600/400?random=${imgWindow.image.id}`
-  }, [imgWindow.image, updateSize])
+    
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Control') {
+        setIsCtrlPressed(false)
+      }
+    }
 
-  // 确保在组件挂载后立即更新尺寸
-  useEffect(() => {
-    const timer = setTimeout(updateSize, 100)
-    return () => clearTimeout(timer)
-  }, [updateSize])
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+    }
+  }, [])
 
-  // 图片居中显示逻辑
+  // 图片初始居中逻辑
   useEffect(() => {
-    if (imageElement && size.width > 0 && size.height > 0 && !isInitialized) {
-      // 计算图片居中位置
-      const containerWidth = size.width
-      const containerHeight = size.height
+    if (imageElement && containerRef.current && needsCentering && imgWindow.x === 0 && imgWindow.y === 0 && imgWindow.scale === 1) {
+      const container = containerRef.current
+      const containerRect = container.getBoundingClientRect()
+      const containerWidth = containerRect.width
+      const containerHeight = containerRect.height
+      
+      // 计算图片在容器中的实际显示尺寸
       const imageWidth = imageElement.width
       const imageHeight = imageElement.height
       
@@ -124,38 +284,125 @@ const ImageWindow: React.FC<ImageWindowProps> = ({
       const centerX = (containerWidth - scaledWidth) / 2
       const centerY = (containerHeight - scaledHeight) / 2
       
-      // 更新窗口位置和缩放
-      if (imgWindow.x === 0 && imgWindow.y === 0 && imgWindow.scale === 1) {
-        // 只有在初始状态时才自动居中
-        onDrag(centerX - imgWindow.x, centerY - imgWindow.y)
-        if (scale !== 1) {
-          onZoom(scale - 1)
-        }
-        setIsInitialized(true)
+      // 设置初始位置和缩放
+      if (centerX !== 0 || centerY !== 0) {
+        onDrag(centerX, centerY)
       }
+      if (scale !== 1) {
+        onZoom(scale - 1)
+      }
+      
+      setNeedsCentering(false)
     }
-  }, [imageElement, size, isInitialized, imgWindow, onDrag, onZoom])
+  }, [imageElement, needsCentering, imgWindow.x, imgWindow.y, imgWindow.scale, onDrag, onZoom])
 
-  // 监听重置操作，重新初始化居中逻辑
+  // 监听重置操作，重新触发居中
   useEffect(() => {
-    if (imgWindow.x === 0 && imgWindow.y === 0 && imgWindow.scale === 1 && isInitialized) {
-      setIsInitialized(false)
+    if (imgWindow.x === 0 && imgWindow.y === 0 && imgWindow.scale === 1 && !needsCentering) {
+      setNeedsCentering(true)
     }
-  }, [imgWindow.x, imgWindow.y, imgWindow.scale, isInitialized])
+  }, [imgWindow.x, imgWindow.y, imgWindow.scale, needsCentering])
 
-  const handleWheel = (e: any) => {
-    e.evt.preventDefault()
-    const delta = e.evt.deltaY > 0 ? -0.1 : 0.1
-    onZoom(delta)
-  }
+  // 鼠标滚轮事件处理
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    const delta = e.deltaY > 0 ? -0.1 : 0.1
+    // 根据Ctrl键状态决定操作单窗口还是所有窗口
+    if (isCtrlPressed) {
+      onZoom(delta)
+    } else {
+      // 操作所有窗口
+      useImageViewerStore.getState().zoomAllWindows(delta)
+    }
+  }, [isCtrlPressed, onZoom])
 
-  const handleDragEnd = (e: any) => {
-    const dx = e.target.x() - imgWindow.x
-    const dy = e.target.y() - imgWindow.y
-    onDrag(dx, dy)
-  }
+  // 鼠标按下事件
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0) return // 只处理左键
+    
+    setIsDragging(true)
+    setDragStart({ 
+      x: e.clientX, 
+      y: e.clientY, 
+      windowX: imgWindow.x, 
+      windowY: imgWindow.y 
+    })
+  }, [imgWindow.x, imgWindow.y])
 
-  if (!imageElement) {
+  // 鼠标移动事件
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging) return
+    
+    const dx = e.clientX - dragStart.x
+    const dy = e.clientY - dragStart.y
+    
+    // 计算新的位置
+    const newX = dragStart.windowX + dx
+    const newY = dragStart.windowY + dy
+    
+    // 根据Ctrl键状态决定操作方式
+    if (!isCtrlPressed) {
+      // 同步操作所有窗口
+      useImageViewerStore.getState().moveAllWindows(newX - imgWindow.x, newY - imgWindow.y)
+    } else {
+      // 单窗口操作
+      const deltaX = newX - imgWindow.x
+      const deltaY = newY - imgWindow.y
+      onDrag(deltaX, deltaY)
+    }
+  }, [isDragging, dragStart, isCtrlPressed, imgWindow.x, imgWindow.y, onDrag])
+
+  // 鼠标松开事件
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    if (!isDragging) return
+    
+    setIsDragging(false)
+  }, [isDragging])
+
+  // 鼠标离开事件
+  const handleMouseLeave = useCallback(() => {
+    if (isDragging) {
+      setIsDragging(false)
+    }
+  }, [isDragging])
+
+  // 计算CSS transform样式
+  const transformStyle = useMemo(() => {
+    const transforms = []
+    
+    // 平移
+    if (imgWindow.x !== 0 || imgWindow.y !== 0) {
+      transforms.push(`translate(${imgWindow.x}px, ${imgWindow.y}px)`)
+    }
+    
+    // 缩放
+    if (imgWindow.scale !== 1) {
+      transforms.push(`scale(${imgWindow.scale})`)
+    }
+    
+    // 旋转
+    if (imgWindow.rotation !== 0) {
+      transforms.push(`rotate(${imgWindow.rotation}deg)`)
+    }
+    
+    return transforms.length > 0 ? transforms.join(' ') : 'none'
+  }, [imgWindow.x, imgWindow.y, imgWindow.scale, imgWindow.rotation])
+
+  // 计算滤镜样式
+  const filterStyle = useMemo(() => {
+    const filters = []
+    
+    if (imgWindow.brightness !== undefined && imgWindow.brightness !== 100) {
+      filters.push(`brightness(${imgWindow.brightness}%)`)
+    }
+    
+    if (imgWindow.contrast !== undefined && imgWindow.contrast !== 100) {
+      filters.push(`contrast(${imgWindow.contrast}%)`)
+    }
+    
+    return filters.length > 0 ? filters.join(' ') : 'none'
+  }, [imgWindow.brightness, imgWindow.contrast])
+
+  if (isLoading) {
     return (
       <div className={cn(styles.windowContainer, { [styles.active]: isActive, [styles.bottomWindow]: isBottomWindow })} onClick={onActivate}>
         <div className={styles.windowToolbar}>
@@ -163,7 +410,46 @@ const ImageWindow: React.FC<ImageWindowProps> = ({
           <button onClick={(e) => { e.stopPropagation(); onClose(); }} className={styles.closeBtn}>×</button>
         </div>
         <div className={styles.loadingState}>
+          <div className={styles.loadingSpinner}></div>
           <p>加载中...</p>
+          <small style={{ color: '#999', fontSize: '10px' }}>
+            {imageUrl.substring(0, 50)}...
+          </small>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className={cn(styles.windowContainer, { [styles.active]: isActive, [styles.bottomWindow]: isBottomWindow })} onClick={onActivate}>
+        <div className={styles.windowToolbar}>
+          <span className={styles.windowTitle}>{imgWindow.image.name}</span>
+          <button onClick={(e) => { e.stopPropagation(); onClose(); }} className={styles.closeBtn}>×</button>
+        </div>
+        <div className={styles.loadingState}>
+          <p style={{ color: '#ff4d4f' }}>❌ {error}</p>
+          <small style={{ color: '#999', fontSize: '10px' }}>
+            URL: {imageUrl.substring(0, 50)}...
+          </small>
+          <button 
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              // 重新加载
+              window.location.reload();
+            }}
+            style={{ 
+              marginTop: '8px', 
+              padding: '4px 8px', 
+              background: '#1890ff', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            重试
+          </button>
         </div>
       </div>
     )
@@ -175,58 +461,103 @@ const ImageWindow: React.FC<ImageWindowProps> = ({
       <div className={styles.windowToolbar}>
         <span className={styles.windowTitle}>{imgWindow.image.name}</span>
         <div className={styles.windowControls}>
-          <button onClick={(e) => { e.stopPropagation(); onRotate(-90); }} title="向左旋转">↶</button>
-          <button onClick={(e) => { e.stopPropagation(); onRotate(90); }} title="向右旋转">↷</button>
-          <button onClick={(e) => { e.stopPropagation(); onZoom(0.2); }} title="放大">+</button>
-          <button onClick={(e) => { e.stopPropagation(); onZoom(-0.2); }} title="缩小">-</button>
-          <button onClick={(e) => { e.stopPropagation(); onReset(); }} title="重置">重置</button>
+          <button onClick={(e) => { 
+            e.stopPropagation(); 
+            if (isCtrlPressed) {
+              onRotate(-90);
+            } else {
+              useImageViewerStore.getState().rotateAllWindows(-90);
+            }
+          }} title="向左旋转">↶</button>
+          <button onClick={(e) => { 
+            e.stopPropagation(); 
+            if (isCtrlPressed) {
+              onRotate(90);
+            } else {
+              useImageViewerStore.getState().rotateAllWindows(90);
+            }
+          }} title="向右旋转">↷</button>
+          <button onClick={(e) => { 
+            e.stopPropagation(); 
+            if (isCtrlPressed) {
+              onZoom(0.2);
+            } else {
+              useImageViewerStore.getState().zoomAllWindows(0.2);
+            }
+          }} title="放大">+</button>
+          <button onClick={(e) => { 
+            e.stopPropagation(); 
+            if (isCtrlPressed) {
+              onZoom(-0.2);
+            } else {
+              useImageViewerStore.getState().zoomAllWindows(-0.2);
+            }
+          }} title="缩小">-</button>
+          <button onClick={(e) => { 
+            e.stopPropagation(); 
+            if (isCtrlPressed) {
+              onReset();
+            } else {
+              useImageViewerStore.getState().resetAllWindows();
+            }
+          }} title="重置">重置</button>
           <button onClick={(e) => { e.stopPropagation(); onClose(); }} className={styles.closeBtn}>×</button>
         </div>
       </div>
       {/* 图片显示区域 */}
-      <div className={styles.windowContent} ref={contentRef}>
-        {size.width > 0 && size.height > 0 && (
-          <Stage
-            ref={stageRef}
-            width={size.width}
-            height={size.height}
-            onWheel={handleWheel}
-          >
-            <Layer>
-              <Group
-                x={imgWindow.x}
-                y={imgWindow.y}
-                scaleX={imgWindow.scale}
-                scaleY={imgWindow.scale}
-                rotation={imgWindow.rotation}
-                draggable
-                onDragEnd={handleDragEnd}
-              >
-                <Image
-                  image={imageElement}
-                  width={imageElement.width}
-                  height={imageElement.height}
-                  filters={[
-                    {
-                      brightness: (imgWindow.brightness - 100) / 100,
-                      contrast: (imgWindow.contrast - 100) / 100
-                    } as any
-                  ]}
-                />
-                {isActive && (
-                  <Rect
-                    x={-2}
-                    y={-2}
-                    width={imageElement.width + 4}
-                    height={imageElement.height + 4}
-                    stroke="#1890ff"
-                    strokeWidth={2}
-                    dash={[5, 5]}
-                  />
-                )}
-              </Group>
-            </Layer>
-          </Stage>
+      <div 
+        className={styles.windowContent} 
+        ref={containerRef}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        style={{ 
+          cursor: isDragging ? 'grabbing' : 'grab',
+          position: 'relative',
+          overflow: 'hidden',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          MozUserSelect: 'none',
+          msUserSelect: 'none'
+        }}
+      >
+        {imageElement ? (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            transform: transformStyle,
+            transformOrigin: 'center center',
+            transition: 'none'
+          }}>
+            <img
+              ref={imgRef}
+              src={imageUrl}
+              alt={imgWindow.image.name}
+              style={{
+                display: 'block',
+                maxWidth: '100%',
+                maxHeight: '100%',
+                filter: filterStyle,
+                userSelect: 'none',
+                pointerEvents: 'none'
+              }}
+              draggable={false}
+            />
+          </div>
+        ) : (
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            height: '100%', 
+            color: '#999',
+            fontSize: '12px'
+          }}>
+            等待图片加载...
+          </div>
         )}
       </div>
     </div>
@@ -252,12 +583,38 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ className }) => {
   } = useImageViewerStore()
 
   const { currentView, handleKeyboardShortcut } = useEPlayerStore()
+  const [showPerformance, setShowPerformance] = useState(false)
+
+  // 预加载所有窗口的图片
+  useEffect(() => {
+    windows.forEach((window: any) => {
+      const imageUrl = generateImageUrl(window.image, 'full')
+      preloadImage(imageUrl)
+    })
+  }, [windows])
 
   // 键盘事件处理
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (currentView === 'viewer') {
         handleKeyboardShortcut(event.key, event.ctrlKey)
+        
+        // 按 P 键切换性能显示
+        if (event.key === 'p' && event.ctrlKey) {
+          event.preventDefault()
+          setShowPerformance(prev => !prev)
+        }
+        
+        // 按 R 键强制刷新
+        if (event.key === 'r' && event.ctrlKey) {
+          event.preventDefault()
+          imageCache.clear()
+          preloadQueue.clear()
+          performanceStats.cacheHits = 0
+          performanceStats.cacheMisses = 0
+          performanceStats.totalLoads = 0
+          window.location.reload()
+        }
       }
     }
 
@@ -289,6 +646,55 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ className }) => {
 
   return (
     <div className={cn(styles.imageViewer, className, { [styles.fullscreen]: isFullscreen })}>
+      {/* 性能显示面板 */}
+      {showPerformance && (
+        <div className={styles.performancePanel}>
+          <h4>性能统计</h4>
+          <div className={styles.performanceStats}>
+            {(() => {
+              const stats = getPerformanceStats()
+              return (
+                <>
+                  <div>缓存命中率: {stats.hitRate}%</div>
+                  <div>缓存大小: {stats.cacheSize}</div>
+                  <div>预加载队列: {stats.preloadQueueSize}</div>
+                  <div>总加载次数: {stats.totalLoads}</div>
+                  <div>缓存命中: {stats.cacheHits}</div>
+                  <div>缓存未命中: {stats.cacheMisses}</div>
+                  <hr style={{ margin: '8px 0', border: 'none', borderTop: '1px solid #444' }} />
+                  <div>当前窗口数: {windows.length}</div>
+                  {windows.map((window: any, index: number) => (
+                    <div key={window.id} style={{ fontSize: '10px', marginTop: '4px' }}>
+                      <div>窗口{index + 1}: {window.image.name}</div>
+                      <div style={{ color: '#aaa' }}>
+                        URL: {generateImageUrl(window.image, 'full').substring(0, 50)}...
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )
+            })()}
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={() => setShowPerformance(false)}>关闭</button>
+            <button 
+              onClick={() => {
+                // 清空缓存，重新加载
+                imageCache.clear()
+                preloadQueue.clear()
+                performanceStats.cacheHits = 0
+                performanceStats.cacheMisses = 0
+                performanceStats.totalLoads = 0
+                window.location.reload()
+              }}
+              style={{ background: '#ff4d4f' }}
+            >
+              清空缓存
+            </button>
+          </div>
+        </div>
+      )}
+      
       {/* 多窗口容器 */}
       <div className={cn(styles.windowsContainer, getLayoutClass())}>
         {windows.map((window: any, index: number) => {

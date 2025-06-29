@@ -138,11 +138,16 @@ export const useImageViewerStore = create<ImageViewerStore>()(
       },
 
       zoomAllWindows: (delta) => {
+        // 优化：批量更新所有窗口的缩放
         const { windows } = get()
-        windows.forEach(w => {
-          const newScale = Math.max(0.1, Math.min(5, w.scale + delta))
-          get().updateWindow(w.id, { scale: newScale })
-        })
+        if (windows.length === 0) return
+        
+        const updatedWindows = windows.map(w => ({
+          ...w,
+          scale: Math.max(0.1, Math.min(5, w.scale + delta))
+        }))
+        
+        set({ windows: updatedWindows })
       },
 
       resetZoom: (windowId) => {
@@ -154,7 +159,7 @@ export const useImageViewerStore = create<ImageViewerStore>()(
       },
 
       // 移动操作
-      moveWindow: (windowId, dx, dy) => {
+      moveWindow: (windowId: string, dx: number, dy: number) => {
         const { windows } = get()
         const window = windows.find(w => w.id === windowId)
         if (!window) return
@@ -165,14 +170,18 @@ export const useImageViewerStore = create<ImageViewerStore>()(
         })
       },
 
-      moveAllWindows: (dx, dy) => {
+      moveAllWindows: (dx: number, dy: number) => {
+        // 优化：直接批量更新所有窗口，避免多次状态变更
         const { windows } = get()
-        windows.forEach(w => {
-          get().updateWindow(w.id, {
-            x: w.x + dx,
-            y: w.y + dy
-          })
-        })
+        if (windows.length === 0) return
+        
+        const updatedWindows = windows.map(w => ({
+          ...w,
+          x: w.x + dx,
+          y: w.y + dy
+        }))
+        
+        set({ windows: updatedWindows })
       },
 
       // 旋转操作
@@ -186,11 +195,16 @@ export const useImageViewerStore = create<ImageViewerStore>()(
       },
 
       rotateAllWindows: (delta) => {
+        // 优化：批量更新所有窗口的旋转
         const { windows } = get()
-        windows.forEach(w => {
-          const newRotation = ((w.rotation + delta) % 360 + 360) % 360
-          get().updateWindow(w.id, { rotation: newRotation })
-        })
+        if (windows.length === 0) return
+        
+        const updatedWindows = windows.map(w => ({
+          ...w,
+          rotation: ((w.rotation + delta) % 360 + 360) % 360
+        }))
+        
+        set({ windows: updatedWindows })
       },
 
       // 调整操作
