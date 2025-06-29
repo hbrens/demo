@@ -32,7 +32,8 @@ function Home() {
       {/* 导航链接 */}
       <nav style={{ marginTop: '2rem' }}>
         <Link to="/" style={{ marginRight: '1rem' }}>首页</Link>
-        <Link to="/eplayer">ePlayer</Link>
+        <Link to="/eplayer" style={{ marginRight: '1rem' }}>ePlayer</Link>
+        <Link to="/knova-demo">Knova Demo</Link>
       </nav>
     </>
   )

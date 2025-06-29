@@ -2,6 +2,7 @@ import { createBrowserRouter, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import Home from '@/pages/Home'
 import EPlayer from '@/pages/EPlayer'
+import KnovaDemo from '@/pages/KnovaDemo'
 
 export interface RouteConfig {
   path: string
@@ -14,7 +15,8 @@ export interface RouteConfig {
 // 路由标题映射
 const routeTitles: Record<string, string> = {
   '/': '首页 - React Demo',
-  '/eplayer': 'ePlayer - 视频播放器'
+  '/eplayer': 'ePlayer - 视频播放器',
+  '/knova-demo': 'Knova Demo - 四画布同步缩放'
 }
 
 // 自定义hook：设置页面标题
@@ -62,6 +64,13 @@ export const routes: RouteConfig[] = [
     meta: {
       title: 'ePlayer - 视频播放器'
     }
+  },
+  {
+    path: '/knova-demo',
+    element: <KnovaDemo />,
+    meta: {
+      title: 'Knova Demo - 四画布同步缩放'
+    }
   }
 ]
 
@@ -73,5 +82,9 @@ export const router = createBrowserRouter([
   {
     path: '/eplayer',
     element: <Layout><EPlayer /></Layout>
+  },
+  {
+    path: '/knova-demo',
+    element: <Layout><KnovaDemo /></Layout>
   }
 ]) 
