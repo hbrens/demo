@@ -1,7 +1,7 @@
 import { createBrowserRouter, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import Home from '@/pages/Home'
-import EPlayer from '@/pages/ePlayer'
+import EPlayer from '@/pages/EPlayer'
 
 export interface RouteConfig {
   path: string
