@@ -77,7 +77,10 @@ export const useImageViewerStore = create<ImageViewerStore>()(
 
       addWindow: (image) => {
         const { windows } = get()
-        if (windows.length >= 4) return // 最多4个窗口
+        
+        if (windows.length >= 4) {
+          return // 最多4个窗口
+        }
         
         const newWindow: ImageWindow = {
           id: `window-${Date.now()}-${Math.random()}`,

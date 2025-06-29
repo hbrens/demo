@@ -40,8 +40,12 @@ const ThumbnailGrid: React.FC<ThumbnailGridProps> = ({ className }) => {
           newSelectedFiles.includes(f.id) && f.type === 'image'
         )
         
+        // 只有当有选中的图片时才打开查看器
         if (selectedImageFiles.length > 0) {
           openImages(selectedImageFiles)
+        } else {
+          // 如果没有选中的图片，清空查看器
+          useEPlayerStore.getState().setCurrentView('thumbnail')
         }
       } else {
         // 普通点击，单选模式
@@ -51,15 +55,10 @@ const ThumbnailGrid: React.FC<ThumbnailGridProps> = ({ className }) => {
     }
   }
 
-  // 处理缩略图选择
+  // 处理缩略图选择 - 移除重复逻辑，只保留基本的选择状态管理
   const handleThumbnailSelect = (fileId: string, event: React.MouseEvent) => {
-    if (event.ctrlKey || event.metaKey) {
-      // Ctrl/Cmd + 点击进行多选
-      toggleFileSelection(fileId)
-    } else {
-      // 普通点击，清空选择并选中当前项
-      useThumbnailStore.getState().setSelectedFiles([fileId])
-    }
+    // 这个函数现在只处理选择状态的视觉反馈，不处理图片打开逻辑
+    // 图片打开逻辑完全由 handleImageClick 处理
   }
 
   // 排序文件
@@ -138,7 +137,6 @@ const ThumbnailGrid: React.FC<ThumbnailGridProps> = ({ className }) => {
               )}
               onClick={(e) => {
                 handleImageClick(file, e)
-                handleThumbnailSelect(file.id, e)
               }}
             >
               <div className={styles.thumbnailImageContainer}>

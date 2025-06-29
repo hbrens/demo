@@ -73,6 +73,7 @@ export const useEPlayerStore = create<EPlayerStore>()(
         
         // 最多添加4张图片
         const imagesToShow = images.slice(0, 4)
+        
         imagesToShow.forEach(image => {
           useImageViewerStore.getState().addWindow(image)
         })
