@@ -22,12 +22,32 @@ const ThumbnailGrid: React.FC<ThumbnailGridProps> = ({ className }) => {
     sortFiles
   } = useThumbnailStore()
 
-  const { currentDirectoryFiles, openImage } = useEPlayerStore()
+  const { currentDirectoryFiles, openImage, openImages } = useEPlayerStore()
 
   // 处理图片点击
-  const handleImageClick = (file: FileNode) => {
+  const handleImageClick = (file: FileNode, event: React.MouseEvent) => {
     if (file.type === 'image') {
-      openImage(file)
+      if (event.ctrlKey || event.metaKey) {
+        // Ctrl/Cmd + 点击，多选模式
+        const newSelectedFiles = selectedFiles.includes(file.id)
+          ? selectedFiles.filter((id: string) => id !== file.id)
+          : [...selectedFiles, file.id]
+        
+        useThumbnailStore.getState().setSelectedFiles(newSelectedFiles)
+        
+        // 获取选中的图片文件（使用更新后的选择列表）
+        const selectedImageFiles = currentDirectoryFiles.filter(f => 
+          newSelectedFiles.includes(f.id) && f.type === 'image'
+        )
+        
+        if (selectedImageFiles.length > 0) {
+          openImages(selectedImageFiles)
+        }
+      } else {
+        // 普通点击，单选模式
+        useThumbnailStore.getState().setSelectedFiles([file.id])
+        openImage(file)
+      }
     }
   }
 
@@ -117,9 +137,7 @@ const ThumbnailGrid: React.FC<ThumbnailGridProps> = ({ className }) => {
                 }
               )}
               onClick={(e) => {
-                if (file.type === 'image') {
-                  handleImageClick(file)
-                }
+                handleImageClick(file, e)
                 handleThumbnailSelect(file.id, e)
               }}
             >
@@ -152,4 +170,4 @@ const ThumbnailGrid: React.FC<ThumbnailGridProps> = ({ className }) => {
   )
 }
 
-export default ThumbnailGrid 
+export default ThumbnailGrid

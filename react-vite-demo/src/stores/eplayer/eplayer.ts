@@ -24,13 +24,14 @@ interface EPlayerStore extends EPlayerState {
   
   // 联动Actions
   openImage: (image: FileNode) => void
+  openImages: (images: FileNode[]) => void
   openImageByIndex: (index: number) => void
   navigateToDirectory: (path: string) => void
   selectFilesInCurrentDirectory: (fileIds: string[]) => void
   refreshCurrentDirectory: () => void
   
   // 快捷键支持
-  handleKeyboardShortcut: (key: string, ctrlKey?: boolean, shiftKey?: boolean) => void
+  handleKeyboardShortcut: (key: string, ctrlKey?: boolean) => void
 }
 
 export const useEPlayerStore = create<EPlayerStore>()(
@@ -56,8 +57,26 @@ export const useEPlayerStore = create<EPlayerStore>()(
         const imageIndex = currentDirectoryFiles.findIndex(file => file.id === image.id)
         
         set({ selectedImageIndex: imageIndex })
-        useImageViewerStore.getState().setCurrentImage(image)
-        useImageViewerStore.getState().resetAdjustments()
+        useImageViewerStore.getState().clearWindows()
+        useImageViewerStore.getState().addWindow(image)
+        set({ currentView: 'viewer' })
+      },
+
+      openImages: (images) => {
+        if (images.length === 0) return
+        
+        const { currentDirectoryFiles } = get()
+        const firstImageIndex = currentDirectoryFiles.findIndex(file => file.id === images[0].id)
+        
+        set({ selectedImageIndex: firstImageIndex })
+        useImageViewerStore.getState().clearWindows()
+        
+        // 最多添加4张图片
+        const imagesToShow = images.slice(0, 4)
+        imagesToShow.forEach(image => {
+          useImageViewerStore.getState().addWindow(image)
+        })
+        
         set({ currentView: 'viewer' })
       },
 
@@ -66,8 +85,8 @@ export const useEPlayerStore = create<EPlayerStore>()(
         if (index >= 0 && index < currentDirectoryFiles.length) {
           const image = currentDirectoryFiles[index]
           set({ selectedImageIndex: index })
-          useImageViewerStore.getState().setCurrentImage(image)
-          useImageViewerStore.getState().resetAdjustments()
+          useImageViewerStore.getState().clearWindows()
+          useImageViewerStore.getState().addWindow(image)
           set({ currentView: 'viewer' })
         }
       },
@@ -92,13 +111,12 @@ export const useEPlayerStore = create<EPlayerStore>()(
       },
 
       refreshCurrentDirectory: () => {
-        const { currentDirectoryFiles } = get()
         const files = useDirectoryTreeStore.getState().getCurrentDirectoryFiles()
         set({ currentDirectoryFiles: files })
       },
 
       // 快捷键支持
-      handleKeyboardShortcut: (key, ctrlKey = false, shiftKey = false) => {
+      handleKeyboardShortcut: (key, ctrlKey = false) => {
         const { currentView, selectedImageIndex, currentDirectoryFiles } = get()
         
         switch (key) {
@@ -117,7 +135,7 @@ export const useEPlayerStore = create<EPlayerStore>()(
           case 'Escape':
             if (currentView === 'viewer') {
               set({ currentView: 'thumbnail' })
-              useImageViewerStore.getState().setCurrentImage(null)
+              useImageViewerStore.getState().clearWindows()
             }
             break
             
@@ -129,7 +147,7 @@ export const useEPlayerStore = create<EPlayerStore>()(
             
           case 'r':
             if (currentView === 'viewer') {
-              useImageViewerStore.getState().resetAdjustments()
+              useImageViewerStore.getState().resetAllWindows()
             }
             break
             
@@ -165,12 +183,12 @@ export const initializeStoreConnections = () => {
   })
 
   // 监听缩略图选择变化
-  useThumbnailStore.subscribe((state) => {
+  useThumbnailStore.subscribe(() => {
     // 可以在这里添加选择变化时的逻辑
   })
 
   // 监听图片查看器变化
-  useImageViewerStore.subscribe((state) => {
+  useImageViewerStore.subscribe(() => {
     // 可以在这里添加图片查看器状态变化时的逻辑
   })
 } 

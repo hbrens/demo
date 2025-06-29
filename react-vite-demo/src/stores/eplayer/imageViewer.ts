@@ -2,29 +2,70 @@ import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import type { FileNode, ImageViewerState } from './types'
 
-interface ImageViewerStore extends ImageViewerState {
+interface ImageWindow {
+  id: string
+  image: FileNode
+  x: number
+  y: number
+  scale: number
+  rotation: number
+  brightness: number
+  contrast: number
+}
+
+interface ImageViewerStore extends Omit<ImageViewerState, 'currentImage'> {
+  // 多窗口状态
+  windows: ImageWindow[]
+  activeWindowId: string | null
+  isMultiSelect: boolean
+  
   // Actions
-  setCurrentImage: (image: FileNode | null) => void
+  setWindows: (windows: ImageWindow[]) => void
+  addWindow: (image: FileNode) => void
+  removeWindow: (windowId: string) => void
+  clearWindows: () => void
+  setActiveWindow: (windowId: string | null) => void
+  setIsMultiSelect: (isMulti: boolean) => void
+  
+  // 窗口操作
+  updateWindow: (windowId: string, updates: Partial<ImageWindow>) => void
+  updateAllWindows: (updates: Partial<Omit<ImageWindow, 'id' | 'image'>>) => void
+  
+  // 缩放操作
+  zoomWindow: (windowId: string, delta: number) => void
+  zoomAllWindows: (delta: number) => void
+  resetZoom: (windowId?: string) => void
+  
+  // 移动操作
+  moveWindow: (windowId: string, dx: number, dy: number) => void
+  moveAllWindows: (dx: number, dy: number) => void
+  
+  // 旋转操作
+  rotateWindow: (windowId: string, delta: number) => void
+  rotateAllWindows: (delta: number) => void
+  
+  // 调整操作
+  setBrightness: (windowId: string, brightness: number) => void
+  setContrast: (windowId: string, contrast: number) => void
+  setBrightnessAll: (brightness: number) => void
+  setContrastAll: (contrast: number) => void
+  
+  // 重置操作
+  resetWindow: (windowId: string) => void
+  resetAllWindows: () => void
+  
+  // 全屏
   toggleFullscreen: () => void
-  setZoom: (zoom: number) => void
-  resetZoom: () => void
-  zoomIn: () => void
-  zoomOut: () => void
-  setRotation: (rotation: number) => void
-  rotateLeft: () => void
-  rotateRight: () => void
-  setBrightness: (brightness: number) => void
-  setContrast: (contrast: number) => void
-  resetAdjustments: () => void
-  nextImage: () => void
-  previousImage: () => void
+  isFullscreen: boolean
 }
 
 export const useImageViewerStore = create<ImageViewerStore>()(
   devtools(
     (set, get) => ({
       // 初始状态
-      currentImage: null,
+      windows: [],
+      activeWindowId: null,
+      isMultiSelect: false,
       isFullscreen: false,
       zoom: 1,
       rotation: 0,
@@ -32,76 +73,207 @@ export const useImageViewerStore = create<ImageViewerStore>()(
       contrast: 100,
 
       // Actions
-      setCurrentImage: (image) => set({ currentImage: image }),
+      setWindows: (windows) => set({ windows }),
 
-      toggleFullscreen: () => {
-        set((state) => ({ isFullscreen: !state.isFullscreen }))
+      addWindow: (image) => {
+        const { windows } = get()
+        if (windows.length >= 4) return // 最多4个窗口
+        
+        const newWindow: ImageWindow = {
+          id: `window-${Date.now()}-${Math.random()}`,
+          image,
+          x: 0,
+          y: 0,
+          scale: 1,
+          rotation: 0,
+          brightness: 100,
+          contrast: 100
+        }
+        
+        set((state) => ({
+          windows: [...state.windows, newWindow],
+          activeWindowId: newWindow.id
+        }))
       },
 
-      setZoom: (zoom) => {
-        const clampedZoom = Math.max(0.1, Math.min(5, zoom))
-        set({ zoom: clampedZoom })
+      removeWindow: (windowId) => {
+        set((state) => ({
+          windows: state.windows.filter(w => w.id !== windowId),
+          activeWindowId: state.activeWindowId === windowId ? null : state.activeWindowId
+        }))
       },
 
-      resetZoom: () => set({ zoom: 1 }),
+      clearWindows: () => set({ windows: [], activeWindowId: null }),
 
-      zoomIn: () => {
-        const { zoom } = get()
-        const newZoom = Math.min(5, zoom * 1.2)
-        set({ zoom: newZoom })
+      setActiveWindow: (windowId) => set({ activeWindowId: windowId }),
+
+      setIsMultiSelect: (isMulti) => set({ isMultiSelect: isMulti }),
+
+      // 窗口操作
+      updateWindow: (windowId, updates) => {
+        set((state) => ({
+          windows: state.windows.map(w => 
+            w.id === windowId ? { ...w, ...updates } : w
+          )
+        }))
       },
 
-      zoomOut: () => {
-        const { zoom } = get()
-        const newZoom = Math.max(0.1, zoom / 1.2)
-        set({ zoom: newZoom })
+      updateAllWindows: (updates) => {
+        set((state) => ({
+          windows: state.windows.map(w => ({ ...w, ...updates }))
+        }))
       },
 
-      setRotation: (rotation) => {
-        const normalizedRotation = ((rotation % 360) + 360) % 360
-        set({ rotation: normalizedRotation })
+      // 缩放操作
+      zoomWindow: (windowId, delta) => {
+        const { windows } = get()
+        const window = windows.find(w => w.id === windowId)
+        if (!window) return
+        
+        const newScale = Math.max(0.1, Math.min(5, window.scale + delta))
+        get().updateWindow(windowId, { scale: newScale })
       },
 
-      rotateLeft: () => {
-        const { rotation } = get()
-        const newRotation = ((rotation - 90) % 360 + 360) % 360
-        set({ rotation: newRotation })
+      zoomAllWindows: (delta) => {
+        const { windows } = get()
+        windows.forEach(w => {
+          const newScale = Math.max(0.1, Math.min(5, w.scale + delta))
+          get().updateWindow(w.id, { scale: newScale })
+        })
       },
 
-      rotateRight: () => {
-        const { rotation } = get()
-        const newRotation = ((rotation + 90) % 360 + 360) % 360
-        set({ rotation: newRotation })
+      resetZoom: (windowId) => {
+        if (windowId) {
+          get().updateWindow(windowId, { scale: 1 })
+        } else {
+          get().updateAllWindows({ scale: 1 })
+        }
       },
 
-      setBrightness: (brightness) => {
+      // 移动操作
+      moveWindow: (windowId, dx, dy) => {
+        const { windows } = get()
+        const window = windows.find(w => w.id === windowId)
+        if (!window) return
+        
+        get().updateWindow(windowId, {
+          x: window.x + dx,
+          y: window.y + dy
+        })
+      },
+
+      moveAllWindows: (dx, dy) => {
+        const { windows } = get()
+        windows.forEach(w => {
+          get().updateWindow(w.id, {
+            x: w.x + dx,
+            y: w.y + dy
+          })
+        })
+      },
+
+      // 旋转操作
+      rotateWindow: (windowId, delta) => {
+        const { windows } = get()
+        const window = windows.find(w => w.id === windowId)
+        if (!window) return
+        
+        const newRotation = ((window.rotation + delta) % 360 + 360) % 360
+        get().updateWindow(windowId, { rotation: newRotation })
+      },
+
+      rotateAllWindows: (delta) => {
+        const { windows } = get()
+        windows.forEach(w => {
+          const newRotation = ((w.rotation + delta) % 360 + 360) % 360
+          get().updateWindow(w.id, { rotation: newRotation })
+        })
+      },
+
+      // 调整操作
+      setBrightness: (windowId, brightness) => {
         const clampedBrightness = Math.max(0, Math.min(200, brightness))
-        set({ brightness: clampedBrightness })
+        get().updateWindow(windowId, { brightness: clampedBrightness })
       },
 
-      setContrast: (contrast) => {
+      setContrast: (windowId, contrast) => {
         const clampedContrast = Math.max(0, Math.min(200, contrast))
-        set({ contrast: clampedContrast })
+        get().updateWindow(windowId, { contrast: clampedContrast })
       },
 
-      resetAdjustments: () => {
-        set({
-          zoom: 1,
+      setBrightnessAll: (brightness) => {
+        const clampedBrightness = Math.max(0, Math.min(200, brightness))
+        get().updateAllWindows({ brightness: clampedBrightness })
+      },
+
+      setContrastAll: (contrast) => {
+        const clampedContrast = Math.max(0, Math.min(200, contrast))
+        get().updateAllWindows({ contrast: clampedContrast })
+      },
+
+      // 重置操作
+      resetWindow: (windowId) => {
+        get().updateWindow(windowId, {
+          x: 0,
+          y: 0,
+          scale: 1,
           rotation: 0,
           brightness: 100,
           contrast: 100
         })
       },
 
+      resetAllWindows: () => {
+        get().updateAllWindows({
+          x: 0,
+          y: 0,
+          scale: 1,
+          rotation: 0,
+          brightness: 100,
+          contrast: 100
+        })
+      },
+
+      // 全屏
+      toggleFullscreen: () => {
+        set((state) => ({ isFullscreen: !state.isFullscreen }))
+      },
+
+      // 兼容旧接口
+      setCurrentImage: (image: FileNode | null) => {
+        if (image) {
+          get().clearWindows()
+          get().addWindow(image)
+        } else {
+          get().clearWindows()
+        }
+      },
+
+      setZoom: (zoom: number) => {
+        const clampedZoom = Math.max(0.1, Math.min(5, zoom))
+        get().updateAllWindows({ scale: clampedZoom })
+      },
+
+      zoomIn: () => get().zoomAllWindows(0.2),
+
+      zoomOut: () => get().zoomAllWindows(-0.2),
+
+      setRotation: (rotation: number) => {
+        const normalizedRotation = ((rotation % 360) + 360) % 360
+        get().updateAllWindows({ rotation: normalizedRotation })
+      },
+
+      rotateLeft: () => get().rotateAllWindows(-90),
+
+      rotateRight: () => get().rotateAllWindows(90),
+
+      resetAdjustments: () => get().resetAllWindows(),
+
       nextImage: () => {
-        // 这里需要从缩略图store获取当前选中的文件列表
-        // 暂时为空实现，实际使用时需要联动
         console.log('Next image - 需要与缩略图store联动')
       },
 
       previousImage: () => {
-        // 这里需要从缩略图store获取当前选中的文件列表
-        // 暂时为空实现，实际使用时需要联动
         console.log('Previous image - 需要与缩略图store联动')
       }
     }),

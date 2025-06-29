@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useRef } from 'react'
-import cn from 'classnames'
 import DirectoryTree from '../DirectoryTree'
 import ThumbnailGrid from '../ThumbnailGrid'
 import ImageViewer from '../ImageViewer'

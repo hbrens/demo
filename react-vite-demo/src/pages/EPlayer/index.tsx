@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react'
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import EPLayerLayout from './Components/EPLayerLayout'
-import { initializeMockData, initializeStoreConnections } from '../../stores'
+import { initializeMockData, initializeStoreConnections, useEPlayerStore, useDirectoryTreeStore } from '../../stores'
 
 function EPlayer() {
   // 初始化store和数据
@@ -11,6 +11,11 @@ function EPlayer() {
     
     // 初始化模拟数据
     initializeMockData()
+    
+    // 调试信息
+    console.log('EPlayer initialized')
+    console.log('Current directory files:', useEPlayerStore.getState().currentDirectoryFiles)
+    console.log('Current path:', useDirectoryTreeStore.getState().currentPath)
   }, [])
 
   return (
