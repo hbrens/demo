@@ -17,6 +17,7 @@ interface ImageWindowProps {
   onRotate: (delta: number) => void
   onReset: () => void
   onDrag: (dx: number, dy: number) => void
+  isBottomWindow: boolean
 }
 
 // 自定义 hook 处理 Konva Stage 的响应式尺寸
@@ -78,9 +79,11 @@ const ImageWindow: React.FC<ImageWindowProps> = ({
   onZoom,
   onRotate,
   onReset,
-  onDrag
+  onDrag,
+  isBottomWindow
 }) => {
   const [imageElement, setImageElement] = useState<HTMLImageElement | null>(null)
+  const [isInitialized, setIsInitialized] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
   const { size, stageRef, updateSize } = useKonvaStage(contentRef)
 
@@ -101,6 +104,45 @@ const ImageWindow: React.FC<ImageWindowProps> = ({
     return () => clearTimeout(timer)
   }, [updateSize])
 
+  // 图片居中显示逻辑
+  useEffect(() => {
+    if (imageElement && size.width > 0 && size.height > 0 && !isInitialized) {
+      // 计算图片居中位置
+      const containerWidth = size.width
+      const containerHeight = size.height
+      const imageWidth = imageElement.width
+      const imageHeight = imageElement.height
+      
+      // 计算缩放比例，确保图片完全显示在容器内
+      const scaleX = containerWidth / imageWidth
+      const scaleY = containerHeight / imageHeight
+      const scale = Math.min(scaleX, scaleY, 1) // 不超过原始大小
+      
+      // 计算居中位置
+      const scaledWidth = imageWidth * scale
+      const scaledHeight = imageHeight * scale
+      const centerX = (containerWidth - scaledWidth) / 2
+      const centerY = (containerHeight - scaledHeight) / 2
+      
+      // 更新窗口位置和缩放
+      if (imgWindow.x === 0 && imgWindow.y === 0 && imgWindow.scale === 1) {
+        // 只有在初始状态时才自动居中
+        onDrag(centerX - imgWindow.x, centerY - imgWindow.y)
+        if (scale !== 1) {
+          onZoom(scale - 1)
+        }
+        setIsInitialized(true)
+      }
+    }
+  }, [imageElement, size, isInitialized, imgWindow, onDrag, onZoom])
+
+  // 监听重置操作，重新初始化居中逻辑
+  useEffect(() => {
+    if (imgWindow.x === 0 && imgWindow.y === 0 && imgWindow.scale === 1 && isInitialized) {
+      setIsInitialized(false)
+    }
+  }, [imgWindow.x, imgWindow.y, imgWindow.scale, isInitialized])
+
   const handleWheel = (e: any) => {
     e.evt.preventDefault()
     const delta = e.evt.deltaY > 0 ? -0.1 : 0.1
@@ -115,7 +157,7 @@ const ImageWindow: React.FC<ImageWindowProps> = ({
 
   if (!imageElement) {
     return (
-      <div className={cn(styles.windowContainer, { [styles.active]: isActive })} onClick={onActivate}>
+      <div className={cn(styles.windowContainer, { [styles.active]: isActive, [styles.bottomWindow]: isBottomWindow })} onClick={onActivate}>
         <div className={styles.windowToolbar}>
           <span className={styles.windowTitle}>{imgWindow.image.name}</span>
           <button onClick={(e) => { e.stopPropagation(); onClose(); }} className={styles.closeBtn}>×</button>
@@ -128,7 +170,7 @@ const ImageWindow: React.FC<ImageWindowProps> = ({
   }
 
   return (
-    <div className={cn(styles.windowContainer, { [styles.active]: isActive })} onClick={onActivate}>
+    <div className={cn(styles.windowContainer, { [styles.active]: isActive, [styles.bottomWindow]: isBottomWindow })} onClick={onActivate}>
       {/* 窗口工具栏 */}
       <div className={styles.windowToolbar}>
         <span className={styles.windowTitle}>{imgWindow.image.name}</span>
@@ -249,19 +291,25 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ className }) => {
     <div className={cn(styles.imageViewer, className, { [styles.fullscreen]: isFullscreen })}>
       {/* 多窗口容器 */}
       <div className={cn(styles.windowsContainer, getLayoutClass())}>
-        {windows.map((window: any) => (
-          <ImageWindow
-            key={window.id}
-            window={window}
-            isActive={window.id === activeWindowId}
-            onActivate={() => setActiveWindow(window.id)}
-            onClose={() => removeWindow(window.id)}
-            onZoom={(delta) => zoomWindow(window.id, delta)}
-            onRotate={(delta) => rotateWindow(window.id, delta)}
-            onReset={() => resetWindow(window.id)}
-            onDrag={(dx, dy) => moveWindow(window.id, dx, dy)}
-          />
-        ))}
+        {windows.map((window: any, index: number) => {
+          // 为4张图片时的底部窗口添加特殊类
+          const isBottomWindow = windows.length === 4 && (index === 2 || index === 3)
+          
+          return (
+            <ImageWindow
+              key={window.id}
+              window={window}
+              isActive={window.id === activeWindowId}
+              onActivate={() => setActiveWindow(window.id)}
+              onClose={() => removeWindow(window.id)}
+              onZoom={(delta) => zoomWindow(window.id, delta)}
+              onRotate={(delta) => rotateWindow(window.id, delta)}
+              onReset={() => resetWindow(window.id)}
+              onDrag={(dx, dy) => moveWindow(window.id, dx, dy)}
+              isBottomWindow={isBottomWindow}
+            />
+          )
+        })}
       </div>
     </div>
   )

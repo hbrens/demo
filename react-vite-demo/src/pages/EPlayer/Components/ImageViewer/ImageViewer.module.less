@@ -65,6 +65,7 @@
   gap: 0;
   padding: 0;
   overflow: hidden;
+  position: relative;
   
   // 1个窗口 - 全屏
   &.layout1 {
@@ -76,15 +77,46 @@
   &.layout2 {
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr;
+    
+    // 添加垂直分割线
+    &::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: #1890ff;
+      z-index: 10;
+    }
   }
   
-  // 3个窗口 - 上1下2
+  // 3个窗口 - 三列显示
   &.layout3 {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr;
     
-    > *:first-child {
-      grid-column: 1 / -1;
+    // 添加垂直分割线
+    &::after {
+      content: '';
+      position: absolute;
+      left: 33.33%;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: #1890ff;
+      z-index: 10;
+    }
+    
+    &::before {
+      content: '';
+      position: absolute;
+      left: 66.66%;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: #1890ff;
+      z-index: 10;
     }
   }
   
@@ -92,6 +124,30 @@
   &.layout4 {
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
+    
+    // 添加垂直分割线
+    &::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: #1890ff;
+      z-index: 10;
+    }
+    
+    // 添加水平分割线
+    &::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: #1890ff;
+      z-index: 10;
+    }
   }
 }
 
@@ -107,6 +163,7 @@
   flex: 1 1 0;
   min-width: 0;
   min-height: 0;
+  position: relative;
   
   &.active {
     border: none;
@@ -118,11 +175,29 @@
   }
 }
 
+// 4张图片时，底部窗口的工具栏位置调整
+.windowsContainer.layout4 {
+  .windowContainer:nth-child(3),
+  .windowContainer:nth-child(4) {
+    flex-direction: column-reverse;
+    
+    .windowToolbar {
+      border-top: 1px solid #e0e0e0;
+      border-bottom: none;
+    }
+  }
+}
+
+// 直接针对底部窗口类
+.windowContainer.bottomWindow {
+  // 保持默认状态
+}
+
 .windowToolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 8px;
+  padding: 2px 8px;
   background: #fafafa;
   border-bottom: 1px solid #e0e0e0;
   flex-shrink: 0;
