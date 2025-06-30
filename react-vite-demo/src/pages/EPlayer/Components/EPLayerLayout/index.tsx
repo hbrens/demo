@@ -56,23 +56,23 @@ const EPLayerLayout: React.FC = () => {
   return (
     <div className={styles.eplayerLayout}>
       {/* 左侧目录树 */}
-      <div 
+      {/* <div 
         className={styles.leftPanel}
         style={{ width: `${leftPanelWidth}px` }}
       >
         <DirectoryTree />
-      </div>
+      </div> */}
       
       {/* 左侧分隔条 */}
-      <Resizer onResize={handleLeftResize} />
+      {/* <Resizer onResize={handleLeftResize} /> */}
       
       {/* 中间缩略图 */}
-      <div 
+      {/* <div 
         className={styles.middlePanel}
         style={{ width: `${middlePanelWidth}px` }}
       >
         <ThumbnailGrid />
-      </div>
+      </div> */}
       
       {/* 中间分隔条 */}
       <Resizer onResize={handleMiddleResize} />
