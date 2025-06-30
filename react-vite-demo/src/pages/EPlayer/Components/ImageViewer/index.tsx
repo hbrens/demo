@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import useImage from 'use-image';
 import SyncCanvas from '../../../KonvaDemo/SyncCanvas';
+import { useImageViewerStore } from '../../../../stores/eplayer/imageViewer';
 
 interface Transform {
   x: number;
@@ -12,13 +13,6 @@ interface CanvasMethods {
   applyExternalTransform: (transform: Transform) => void;
   getCurrentTransform: () => Transform;
 }
-
-const initialImageUrls = [
-  'http://127.0.0.1:8080/b67a7d25bacfb81a32e568696f9f694c.jpg',
-  'http://127.0.0.1:8080/b67a7d25bacfb81a32e568696f9f694c.jpg',
-  'http://127.0.0.1:8080/b67a7d25bacfb81a32e568696f9f694c.jpg',
-  'http://127.0.0.1:8080/b67a7d25bacfb81a32e568696f9f694c.jpg',
-];
 
 const getGridStyle = (count: number) => {
   if (count === 1) {
@@ -33,7 +27,7 @@ const getGridStyle = (count: number) => {
 };
 
 const ImageViewer = () => {
-  const [imageUrls, setImageUrls] = useState(initialImageUrls);
+  const { imageUrls, removeImageUrl } = useImageViewerStore();
   const [image1] = useImage(imageUrls[0] || '');
   const [image2] = useImage(imageUrls[1] || '');
   const [image3] = useImage(imageUrls[2] || '');
@@ -99,10 +93,6 @@ const ImageViewer = () => {
     canvasRefs.current[index] = el;
   };
 
-  const handleClose = (idx: number) => {
-    setImageUrls(urls => urls.filter((_, i) => i !== idx));
-  };
-
   const gridStyle = getGridStyle(imageUrls.length);
 
   return (
@@ -136,7 +126,7 @@ const ImageViewer = () => {
             {/* 工具栏 */}
             <div style={{ height: 40, background: '#f5f5f5', borderBottom: isBottomBar ? undefined : '1px solid #ddd', borderTop: isBottomBar ? '1px solid #ddd' : undefined, display: 'flex', alignItems: 'center', padding: '0 16px', justifyContent: 'space-between' }}>
               <span style={{ fontWeight: 'bold' }}>{`窗口${index + 1}`}</span>
-              <button onClick={() => handleClose(index)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, color: '#888' }} title="关闭">✖</button>
+              <button onClick={() => removeImageUrl(index)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, color: '#888' }} title="关闭">✖</button>
             </div>
             {/* 图片区域 */}
             <div style={{ height: 'calc(100% - 40px)', position: 'relative', overflow: 'hidden' }}>

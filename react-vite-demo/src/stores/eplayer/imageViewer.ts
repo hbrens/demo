@@ -1,11 +1,25 @@
 import { create } from 'zustand'
-import type { FileNode } from './types'
 
-// 预留空结构，方便后续重写
+// 初始图片 URL 列表
+const initialImageUrls = [
+  'http://127.0.0.1:8080/b67a7d25bacfb81a32e568696f9f694c.jpg',
+  'http://127.0.0.1:8080/b67a7d25bacfb81a32e568696f9f694c.jpg',
+  'http://127.0.0.1:8080/b67a7d25bacfb81a32e568696f9f694c.jpg',
+  'http://127.0.0.1:8080/b67a7d25bacfb81a32e568696f9f694c.jpg',
+];
+
 interface ImageViewerStore {
-  // 这里可以添加你后续需要的状态和方法
+  imageUrls: string[];
+  setImageUrls: (urls: string[]) => void;
+  addImageUrl: (url: string) => void;
+  removeImageUrl: (idx: number) => void;
+  resetImageUrls: () => void;
 }
 
-export const useImageViewerStore = create<ImageViewerStore>(() => ({
-  // 空实现
+export const useImageViewerStore = create<ImageViewerStore>((set) => ({
+  imageUrls: initialImageUrls,
+  setImageUrls: (urls) => set({ imageUrls: urls }),
+  addImageUrl: (url) => set((state) => ({ imageUrls: [...state.imageUrls, url] })),
+  removeImageUrl: (idx) => set((state) => ({ imageUrls: state.imageUrls.filter((_, i) => i !== idx) })),
+  resetImageUrls: () => set({ imageUrls: initialImageUrls }),
 })) 
