@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import useImage from 'use-image';
-import SyncCanvas from './SyncCanvas';
+import SyncCanvas from '../../../KonvaDemo/SyncCanvas';
 
 interface Transform {
   x: number;
@@ -13,18 +13,31 @@ interface CanvasMethods {
   getCurrentTransform: () => Transform;
 }
 
-const imageUrls = [
+const initialImageUrls = [
   'http://127.0.0.1:8080/b67a7d25bacfb81a32e568696f9f694c.jpg',
   'http://127.0.0.1:8080/b67a7d25bacfb81a32e568696f9f694c.jpg',
   'http://127.0.0.1:8080/b67a7d25bacfb81a32e568696f9f694c.jpg',
   'http://127.0.0.1:8080/b67a7d25bacfb81a32e568696f9f694c.jpg',
 ];
 
+const getGridStyle = (count: number) => {
+  if (count === 1) {
+    return { gridTemplateColumns: '1fr', gridTemplateRows: '1fr' };
+  } else if (count === 2) {
+    return { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr' };
+  } else if (count === 3) {
+    return { gridTemplateColumns: '1fr 1fr 1fr', gridTemplateRows: '1fr' };
+  } else {
+    return { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr' };
+  }
+};
+
 const ImageViewer = () => {
-  const [image1] = useImage(imageUrls[0]);
-  const [image2] = useImage(imageUrls[1]);
-  const [image3] = useImage(imageUrls[2]);
-  const [image4] = useImage(imageUrls[3]);
+  const [imageUrls, setImageUrls] = useState(initialImageUrls);
+  const [image1] = useImage(imageUrls[0] || '');
+  const [image2] = useImage(imageUrls[1] || '');
+  const [image3] = useImage(imageUrls[2] || '');
+  const [image4] = useImage(imageUrls[3] || '');
   const images = [image1, image2, image3, image4];
 
   const containerRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -67,12 +80,17 @@ const ImageViewer = () => {
     canvasRefs.current[index] = el;
   };
 
+  const handleClose = (idx: number) => {
+    setImageUrls(urls => urls.filter((_, i) => i !== idx));
+  };
+
+  const gridStyle = getGridStyle(imageUrls.length);
+
   return (
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gridTemplateRows: '1fr 1fr',
+        ...gridStyle,
         width: '100%',
         height: '100%',
         boxSizing: 'border-box',
@@ -80,50 +98,56 @@ const ImageViewer = () => {
       }}
       tabIndex={0}
     >
-      {images.map((img, index) => (
-        <div
-          key={index}
-          ref={setContainerRef(index)}
-          style={{
-            border: '1px solid #ccc',
-            overflow: 'hidden',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          {/* 工具栏 */}
-          <div style={{ height: 40, background: '#f5f5f5', borderBottom: '1px solid #ddd', display: 'flex', alignItems: 'center', padding: '0 16px' }}>
-            <span style={{ fontWeight: 'bold' }}>{`窗口${index + 1}`}</span>
-          </div>
-          {/* 图片区域 */}
-          <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-            <SyncCanvas
-              ref={setCanvasRef(index)}
-              image={img ?? null}
-              containerRef={{ current: containerRefs.current[index] } as any}
-              onTransformChange={(transform, shouldSync) =>
-                handleTransformChange(transform, shouldSync, index)
-              }
-              onDragStart={() => {
-                setIsDragging(true);
-                const canvas = canvasRefs.current[index];
-                if (canvas) {
-                  lastPositionRef.current = canvas.getCurrentTransform();
+      {imageUrls.map((url, index) => {
+        // 四窗口时，下方两个窗口工具栏放底部
+        const isFour = imageUrls.length === 4;
+        const isBottomBar = isFour && (index === 2 || index === 3);
+        return (
+          <div
+            key={index}
+            ref={setContainerRef(index)}
+            style={{
+              border: '1px solid #ccc',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: isBottomBar ? 'column-reverse' : 'column',
+            }}
+          >
+            {/* 工具栏 */}
+            <div style={{ height: 40, background: '#f5f5f5', borderBottom: isBottomBar ? undefined : '1px solid #ddd', borderTop: isBottomBar ? '1px solid #ddd' : undefined, display: 'flex', alignItems: 'center', padding: '0 16px', justifyContent: 'space-between' }}>
+              <span style={{ fontWeight: 'bold' }}>{`窗口${index + 1}`}</span>
+              <button onClick={() => handleClose(index)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, color: '#888' }} title="关闭">✖</button>
+            </div>
+            {/* 图片区域 */}
+            <div style={{ height: 'calc(100% - 40px)', position: 'relative', overflow: 'hidden' }}>
+              <SyncCanvas
+                ref={setCanvasRef(index)}
+                image={images[index] ?? null}
+                containerRef={{ current: containerRefs.current[index] } as any}
+                onTransformChange={(transform, shouldSync) =>
+                  handleTransformChange(transform, shouldSync, index)
                 }
-              }}
-              onDragEnd={() => {
-                setIsDragging(false);
-                const canvas = canvasRefs.current[index];
-                if (canvas) {
-                  lastPositionRef.current = canvas.getCurrentTransform();
-                }
-              }}
-              syncEnabled={syncEnabled}
-            />
+                onDragStart={() => {
+                  setIsDragging(true);
+                  const canvas = canvasRefs.current[index];
+                  if (canvas) {
+                    lastPositionRef.current = canvas.getCurrentTransform();
+                  }
+                }}
+                onDragEnd={() => {
+                  setIsDragging(false);
+                  const canvas = canvasRefs.current[index];
+                  if (canvas) {
+                    lastPositionRef.current = canvas.getCurrentTransform();
+                  }
+                }}
+                syncEnabled={syncEnabled}
+              />
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
