@@ -2,7 +2,7 @@ import { createBrowserRouter, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import Home from '@/pages/Home'
 import EPlayer from '@/pages/EPlayer'
-import KnovaDemo from '@/pages/KnovaDemo'
+import KonvaDemo from '@/pages/KonvaDemo'
 
 export interface RouteConfig {
   path: string
@@ -16,7 +16,7 @@ export interface RouteConfig {
 const routeTitles: Record<string, string> = {
   '/': '首页 - React Demo',
   '/eplayer': 'ePlayer - 视频播放器',
-  '/knova-demo': 'Knova Demo - 四画布同步缩放'
+  '/konva-demo': 'Konva Demo - 四画布同步缩放'
 }
 
 // 自定义hook：设置页面标题
@@ -66,25 +66,18 @@ export const routes: RouteConfig[] = [
     }
   },
   {
-    path: '/knova-demo',
-    element: <KnovaDemo />,
+    path: '/konva-demo',
+    element: <KonvaDemo />,
     meta: {
-      title: 'Knova Demo - 四画布同步缩放'
+      title: 'Konva Demo - 四画布同步缩放'
     }
   }
 ]
 
-export const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <Layout><Home /></Layout>
-  },
-  {
-    path: '/eplayer',
-    element: <Layout><EPlayer /></Layout>
-  },
-  {
-    path: '/knova-demo',
-    element: <Layout><KnovaDemo /></Layout>
-  }
-]) 
+// 基于 routes 自动生成 router
+export const router = createBrowserRouter(
+  routes.map(route => ({
+    path: route.path,
+    element: <Layout>{route.element}</Layout>
+  }))
+) 
