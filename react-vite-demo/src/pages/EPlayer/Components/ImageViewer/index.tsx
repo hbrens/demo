@@ -44,7 +44,12 @@ const ImageViewer = () => {
   const canvasRefs = useRef<(CanvasMethods | null)[]>([]);
   const [syncEnabled, setSyncEnabled] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
-  const lastPositionRef = useRef<Transform>({ x: 0, y: 0, scale: 1 });
+  const lastPositionRef = useRef<Transform[]>([
+    { x: 0, y: 0, scale: 1 },
+    { x: 0, y: 0, scale: 1 },
+    { x: 0, y: 0, scale: 1 },
+    { x: 0, y: 0, scale: 1 },
+  ]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -65,11 +70,25 @@ const ImageViewer = () => {
 
   const handleTransformChange = useCallback((transform: Transform, shouldSync: boolean, sourceIndex: number) => {
     if (shouldSync) {
+      const last = lastPositionRef.current[sourceIndex];
+      const delta = {
+        x: transform.x - last.x,
+        y: transform.y - last.y,
+        scale: transform.scale / last.scale,
+      };
       canvasRefs.current.forEach((canvas, index) => {
         if (index !== sourceIndex && canvas) {
-          canvas.applyExternalTransform(transform);
+          const theirLast = lastPositionRef.current[index];
+          const newTransform = {
+            x: theirLast.x + delta.x,
+            y: theirLast.y + delta.y,
+            scale: theirLast.scale * delta.scale,
+          };
+          canvas.applyExternalTransform(newTransform);
+          lastPositionRef.current[index] = newTransform;
         }
       });
+      lastPositionRef.current[sourceIndex] = transform;
     }
   }, []);
 
@@ -132,14 +151,14 @@ const ImageViewer = () => {
                   setIsDragging(true);
                   const canvas = canvasRefs.current[index];
                   if (canvas) {
-                    lastPositionRef.current = canvas.getCurrentTransform();
+                    lastPositionRef.current[index] = canvas.getCurrentTransform();
                   }
                 }}
                 onDragEnd={() => {
                   setIsDragging(false);
                   const canvas = canvasRefs.current[index];
                   if (canvas) {
-                    lastPositionRef.current = canvas.getCurrentTransform();
+                    lastPositionRef.current[index] = canvas.getCurrentTransform();
                   }
                 }}
                 syncEnabled={syncEnabled}

@@ -150,30 +150,26 @@ const SyncCanvas = forwardRef<CanvasMethods, SyncCanvasProps>(({
       }}
       onWheel={(e) => {
         e.evt.preventDefault();
-        
-        const isCtrlPressed = e.evt.ctrlKey || e.evt.metaKey;
-        if (isCtrlPressed && !syncEnabled) return;
-        
+        // 允许本地缩放，无论syncEnabled如何
         const stage = e.target.getStage();
+        if (!stage) return;
         const oldScale = transform.scale;
         const pointer = stage.getPointerPosition();
-        
+        if (!pointer) return;
         const mousePointTo = {
           x: (pointer.x - stage.x()) / oldScale,
           y: (pointer.y - stage.y()) / oldScale,
         };
-
         const newScale = Math.max(0.1, Math.min(10, 
           e.evt.deltaY > 0 ? oldScale * 0.95 : oldScale * 1.05
         ));
-        
         const newTransform = {
           x: pointer.x - mousePointTo.x * newScale,
           y: pointer.y - mousePointTo.y * newScale,
           scale: newScale
         };
-        
         setTransform(newTransform);
+        // 不直接调用onTransformChange，setTransform后useEffect会自动通知
       }}
       x={transform.x}
       y={transform.y}
