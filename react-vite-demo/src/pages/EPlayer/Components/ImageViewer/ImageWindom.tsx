@@ -66,7 +66,7 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
   }
 
   function handleMouseUp(isDraggingRef: MutableRefObject<boolean>) {
-    // isDraggingRef.current = false;
+    isDraggingRef.current = false;
   }
 
   // 缩放相关
@@ -80,8 +80,11 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
     const oldScale = stageRef.current!.scaleX();
     const pointer = stageRef.current!.getPointerPosition();
     const direction = e.evt.deltaY > 0 ? -1 : 1;
-    // 通知其他窗口，带上pointer
-    eventBus.emit('imagewindow-scale', { index, direction, pointer });
+    // 通知其他窗口
+    if (!e.evt.ctrlKey) {
+      eventBus.emit('imagewindow-scale', { index, direction });
+    }
+  
     // 自己处理缩放
     const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
     if (pointer) {
@@ -127,11 +130,15 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
     };
     const onScale = (payload: any) => {
       if (payload.index === index) return;
-      const { direction, pointer } = payload;
-      if (!stageRef.current || !pointer) return;
+      const { direction } = payload;
+      // 只处理放大/缩小
+      if (!stageRef.current) return;
       const oldScale = stageRef.current.scaleX();
       const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
-      // 用pointer作为缩放中心
+      // 用舞台中心点作为缩放中心
+      const containerWidth = stageRef.current.width();
+      const containerHeight = stageRef.current.height();
+      const pointer = { x: containerWidth / 2, y: containerHeight / 2 };
       const mousePointTo = {
         x: (pointer.x - stageRef.current.x()) / oldScale,
         y: (pointer.y - stageRef.current.y()) / oldScale,
@@ -207,33 +214,33 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
 
       stageRef.current.on('mousedown', (e) => {
         handleMouseDown(e, isDraggingRef, positionRef, imageRef, imageStartPosRef);
-        // 保存图片初始位置
         if (imageRef.current) {
           imageStartPosRef.current = imageRef.current.position();
         }
-        // 发出鼠标点击事件
-        eventBus.emit('imagewindow-mousedown', { index });
+        if (!e.evt.ctrlKey) {
+          eventBus.emit('imagewindow-mousedown', { index });
+        }
       });
 
       stageRef.current.on('mousemove', (e) => {
         handleMouseMove(e, isDraggingRef, positionRef, imageRef, imageStartPosRef, layerRef, stageRef);
-        // 只在拖拽时发出拖拽事件
         if (isDraggingRef.current) {
           const delta = {
             x: e.evt.clientX - positionRef.current.x,
             y: e.evt.clientY - positionRef.current.y
           };
-          console.log(`发出的`, delta.x, delta.y);
-          eventBus.emit('imagewindow-mousemove', { index, delta });
+          if (!e.evt.ctrlKey) {
+            eventBus.emit('imagewindow-mousemove', { index, delta });
+          }
         }
       });
 
-      stageRef.current.on('mouseup', () => {
+      stageRef.current.on('mouseup', (e) => {
         isDraggingRef.current = false;
         handleMouseUp(isDraggingRef);
-        // 发出鼠标松开事件
-        console.log(`发出的 mouse up`, index);
-        eventBus.emit('imagewindow-mouseup', { index });
+        if (!e.evt.ctrlKey) {
+          eventBus.emit('imagewindow-mouseup', { index });
+        }
       });  
     }
   }, [])
