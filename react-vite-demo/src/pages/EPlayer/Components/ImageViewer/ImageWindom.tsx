@@ -54,9 +54,12 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
   ) {
     e.evt.preventDefault();
     if (!isDraggingRef.current || !imageRef.current) return;
+    // 获取当前缩放比例
+    const scale = stageRef.current ? stageRef.current.scaleX() : 1;
+    // 鼠标移动距离要除以缩放比例
     const delta = {
-      x: e.evt.clientX - positionRef.current.x,
-      y: e.evt.clientY - positionRef.current.y
+      x: (e.evt.clientX - positionRef.current.x) / scale,
+      y: (e.evt.clientY - positionRef.current.y) / scale
     };
     imageRef.current.position({
       x: imageStartPosRef.current.x + delta.x,
@@ -116,9 +119,12 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
       if (payload.index === index) return;
       if (!isDraggingRef.current || !imageRef.current) return;
       const { delta } = payload;
+      // 获取当前缩放比例
+      const scale = stageRef.current ? stageRef.current.scaleX() : 1;
+      // delta 需要除以 scale
       imageRef.current.position({
-        x: imageStartPosRef.current.x + delta.x,
-        y: imageStartPosRef.current.y + delta.y
+        x: imageStartPosRef.current.x + delta.x / scale,
+        y: imageStartPosRef.current.y + delta.y / scale
       });
       stageRef.current && stageRef.current.batchDraw();
       console.log(`[窗口${index}] 收到拖拽事件`, payload.delta);
