@@ -73,12 +73,16 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
   function handleWheel(
     e: Konva.KonvaEventObject<WheelEvent>,
     stageRef: MutableRefObject<Konva.Stage | null>,
-    scaleBy: number
+    scaleBy: number,
+    index: number
   ) {
     e.evt.preventDefault();
     const oldScale = stageRef.current!.scaleX();
     const pointer = stageRef.current!.getPointerPosition();
     const direction = e.evt.deltaY > 0 ? -1 : 1;
+    // 通知其他窗口，带上pointer
+    eventBus.emit('imagewindow-scale', { index, direction, pointer });
+    // 自己处理缩放
     const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
     if (pointer) {
       const mousePointTo = {
@@ -123,7 +127,22 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
     };
     const onScale = (payload: any) => {
       if (payload.index === index) return;
-      console.log(`[窗口${index}] 收到缩放事件`, payload);
+      const { direction, pointer } = payload;
+      if (!stageRef.current || !pointer) return;
+      const oldScale = stageRef.current.scaleX();
+      const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+      // 用pointer作为缩放中心
+      const mousePointTo = {
+        x: (pointer.x - stageRef.current.x()) / oldScale,
+        y: (pointer.y - stageRef.current.y()) / oldScale,
+      };
+      stageRef.current.scale({ x: newScale, y: newScale });
+      const newPos = {
+        x: pointer.x - mousePointTo.x * newScale,
+        y: pointer.y - mousePointTo.y * newScale,
+      };
+      stageRef.current.position(newPos);
+      stageRef.current.batchDraw();
     };
     eventBus.on('imagewindow-mousedown', onMouseDown);
     eventBus.on('imagewindow-mousemove', onMouseMove);
@@ -183,9 +202,7 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
       };
 
       stageRef.current.on('wheel', (e) => {
-        handleWheel(e, stageRef, scaleBy);
-        // 发出缩放事件
-        eventBus.emit('imagewindow-scale', { index, evt: e });
+        handleWheel(e, stageRef, scaleBy, index);
       });
 
       stageRef.current.on('mousedown', (e) => {
@@ -212,6 +229,7 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
       });
 
       stageRef.current.on('mouseup', () => {
+        isDraggingRef.current = false;
         handleMouseUp(isDraggingRef);
         // 发出鼠标松开事件
         console.log(`发出的 mouse up`, index);
