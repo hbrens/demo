@@ -23,7 +23,7 @@ export const useThumbnailStore = create<ThumbnailStore>()(
       viewMode: 'grid',
       sortBy: 'name',
       sortOrder: 'asc',
-      thumbnailSize: 'medium',
+      thumbnailSize: 'small',
 
       // Actions
       setSelectedFiles: (fileIds) => set({ selectedFiles: fileIds }),

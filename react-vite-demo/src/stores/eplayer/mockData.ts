@@ -6,7 +6,7 @@ import { useEPlayerStore } from './eplayer'
 const generateId = () => Math.random().toString(36).substr(2, 9)
 
 // 批量生成图片文件
-const mockFiles: FileNode[] = Array.from({ length: 20 }).map((_, i) => ({
+const mockFiles: FileNode[] = Array.from({ length: 200 }).map((_, i) => ({
   id: generateId(),
   name: `图片${i + 1}.jpg`,
   path: `/images/landscape${i + 1}.jpg`,
@@ -14,7 +14,7 @@ const mockFiles: FileNode[] = Array.from({ length: 20 }).map((_, i) => ({
   type: 'image',
   extension: 'jpg',
   lastModified: new Date(`2024-01-${(i % 28) + 1}`),
-  thumbnail: `https://picsum.photos/seed/${i + 1}/150/150`,
+  thumbnail: `http://127.0.0.1:8080/cae5548fb6c3bb761df999c543cd468c.jpg`,
   metadata: {
     width: 1200 + Math.floor(Math.random() * 800),
     height: 800 + Math.floor(Math.random() * 600)

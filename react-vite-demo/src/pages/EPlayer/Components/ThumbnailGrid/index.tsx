@@ -2,6 +2,7 @@ import React from 'react'
 import cn from 'classnames'
 import { useThumbnailStore, useEPlayerStore, type FileNode } from '../../../../stores'
 import styles from './ThumbnailGrid.module.less'
+import { AutoSizer, Grid } from 'react-virtualized'
 
 interface ThumbnailGridProps {
   className?: string
@@ -80,15 +81,6 @@ const ThumbnailGrid: React.FC<ThumbnailGridProps> = ({ className }) => {
         
         <div className={styles.controls}>
           <select 
-            value={viewMode} 
-            onChange={(e) => setViewMode(e.target.value as 'grid' | 'list')}
-            className={styles.viewModeSelect}
-          >
-            <option value="grid">网格视图</option>
-            <option value="list">列表视图</option>
-          </select>
-
-          <select 
             value={sortBy} 
             onChange={(e) => setSortBy(e.target.value as 'name' | 'date' | 'size' | 'type')}
             className={styles.sortSelect}
@@ -123,45 +115,85 @@ const ThumbnailGrid: React.FC<ThumbnailGridProps> = ({ className }) => {
           <p>当前目录没有文件</p>
         </div>
       ) : (
-        <div className={cn(styles.gridContainer, { [styles.listView]: viewMode === 'list' })}>
-          {sortedFiles.map((file: FileNode) => (
-            <div 
-              key={file.id} 
-              className={cn(
-                styles.thumbnailItem,
-                getThumbnailSizeClass(),
-                { 
-                  [styles.selected]: selectedFiles.includes(file.id),
-                  [styles.clickable]: file.type === 'image'
-                }
-              )}
-              onClick={(e) => {
-                handleImageClick(file, e)
-              }}
-            >
-              <div className={styles.thumbnailImageContainer}>
-                <img 
-                  src={file.thumbnail || `https://picsum.photos/150/150?random=${file.id}`}
-                  alt={file.name}
-                  className={styles.thumbnailImage}
+        <div style={{ flex: 1, minHeight: 0, height: 'calc(100vh - 120px)' }}>
+          <AutoSizer>
+            {({ width, height }: { width: number; height: number }) => {
+              let thumbnailWidth = 150, thumbnailHeight = 200
+              if (thumbnailSize === 'small') { thumbnailWidth = 100; thumbnailHeight = 130 }
+              if (thumbnailSize === 'large') { thumbnailWidth = 200; thumbnailHeight = 260 }
+              const gap = 8
+              const cellWidth = thumbnailWidth + gap * 2
+              const cellHeight = thumbnailHeight + gap * 2
+              const columnCount = Math.max(1, Math.floor(width / cellWidth))
+              const rowCount = Math.ceil(sortedFiles.length / columnCount)
+              return (
+                <Grid
+                  columnCount={columnCount}
+                  columnWidth={cellWidth}
+                  height={height}
+                  rowCount={rowCount}
+                  rowHeight={cellHeight}
+                  width={width}
+                  cellRenderer={({ columnIndex, rowIndex, key, style }: { columnIndex: number; rowIndex: number; key: string; style: React.CSSProperties }) => {
+                    const index = rowIndex * columnCount + columnIndex
+                    if (index >= sortedFiles.length) return null
+                    const file = sortedFiles[index]
+                    return (
+                      <div
+                        key={key}
+                        style={{
+                          ...style,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <div
+                          className={cn(
+                            styles.thumbnailItem,
+                            getThumbnailSizeClass(),
+                            {
+                              [styles.selected]: selectedFiles.includes(file.id),
+                              [styles.clickable]: file.type === 'image'
+                            }
+                          )}
+                          style={{
+                            margin: gap,
+                            width: thumbnailWidth,
+                            height: thumbnailHeight,
+                            boxSizing: 'border-box',
+                          }}
+                          onClick={(e) => handleImageClick(file, e)}
+                        >
+                          <div className={styles.thumbnailImageContainer}>
+                            <img
+                              src={file.thumbnail || `https://picsum.photos/150/150?random=${file.id}`}
+                              alt={file.name}
+                              className={styles.thumbnailImage}
+                            />
+                            {file.type === 'video' && (
+                              <div className={styles.videoIndicator}>▶</div>
+                            )}
+                          </div>
+                          <div className={styles.thumbnailInfo}>
+                            <div className={styles.thumbnailName}>{file.name}</div>
+                            <div className={styles.thumbnailDetails}>
+                              {(file.size / 1024 / 1024).toFixed(1)}MB | {file.extension.toUpperCase()}
+                            </div>
+                            {file.metadata?.width && file.metadata?.height && (
+                              <div className={styles.thumbnailDimensions}>
+                                {file.metadata.width} × {file.metadata.height}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  }}
                 />
-                {file.type === 'video' && (
-                  <div className={styles.videoIndicator}>▶</div>
-                )}
-              </div>
-              <div className={styles.thumbnailInfo}>
-                <div className={styles.thumbnailName}>{file.name}</div>
-                <div className={styles.thumbnailDetails}>
-                  {(file.size / 1024 / 1024).toFixed(1)}MB | {file.extension.toUpperCase()}
-                </div>
-                {file.metadata?.width && file.metadata?.height && (
-                  <div className={styles.thumbnailDimensions}>
-                    {file.metadata.width} × {file.metadata.height}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
+              )
+            }}
+          </AutoSizer>
         </div>
       )}
     </div>
