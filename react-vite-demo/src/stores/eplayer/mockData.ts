@@ -6,7 +6,7 @@ import { useEPlayerStore } from './eplayer'
 const generateId = () => Math.random().toString(36).substr(2, 9)
 
 // 批量生成图片文件
-const mockFiles: FileNode[] = Array.from({ length: 200 }).map((_, i) => ({
+const mockFiles: FileNode[] = Array.from({ length: 20000 }).map((_, i) => ({
   id: generateId(),
   name: `图片${i + 1}.jpg`,
   path: `/images/landscape${i + 1}.jpg`,

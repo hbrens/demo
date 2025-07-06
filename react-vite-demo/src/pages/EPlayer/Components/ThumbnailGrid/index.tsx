@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useRef } from 'react'
 import cn from 'classnames'
 import { useThumbnailStore, useEPlayerStore, type FileNode } from '../../../../stores'
 import styles from './ThumbnailGrid.module.less'
@@ -24,6 +24,9 @@ const ThumbnailGrid: React.FC<ThumbnailGridProps> = ({ className }) => {
   } = useThumbnailStore()
 
   const { currentDirectoryFiles, openImage, openImages } = useEPlayerStore()
+
+  const gridRef = useRef<Grid>(null)
+  const columnCountRef = useRef(1)
 
   // 处理图片点击
   const handleImageClick = (file: FileNode, event: React.MouseEvent) => {
@@ -78,6 +81,22 @@ const ThumbnailGrid: React.FC<ThumbnailGridProps> = ({ className }) => {
     <div className={cn(styles.thumbnailGrid, className)}>
       <div className={styles.toolbar}>
         <h3 className={styles.title}>缩略图</h3>
+        <button
+          type="button"
+          style={{ marginLeft: 12 }}
+          onClick={() => {
+            const columnCount = columnCountRef.current || 1
+            const rowIndex = Math.floor(10333 / columnCount)
+            if (gridRef.current) {
+              gridRef.current.scrollToCell({
+                columnIndex: 0,
+                rowIndex,
+              })
+            }
+          }}
+        >
+          跳转到10333
+        </button>
         
         <div className={styles.controls}>
           <select 
@@ -126,8 +145,10 @@ const ThumbnailGrid: React.FC<ThumbnailGridProps> = ({ className }) => {
               const cellHeight = thumbnailHeight + gap * 2
               const columnCount = Math.max(1, Math.floor(width / cellWidth))
               const rowCount = Math.ceil(sortedFiles.length / columnCount)
+              columnCountRef.current = columnCount
               return (
                 <Grid
+                  ref={gridRef}
                   columnCount={columnCount}
                   columnWidth={cellWidth}
                   height={height}
@@ -182,7 +203,7 @@ const ThumbnailGrid: React.FC<ThumbnailGridProps> = ({ className }) => {
                             </div>
                             {file.metadata?.width && file.metadata?.height && (
                               <div className={styles.thumbnailDimensions}>
-                                {file.metadata.width} × {file.metadata.height}
+                                {file.metadata.width} × {file.metadata.height} {index}
                               </div>
                             )}
                           </div>
