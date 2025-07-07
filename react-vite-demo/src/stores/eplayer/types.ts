@@ -38,6 +38,7 @@ export interface ImageViewerState {
 // 缩略图网格状态类型
 export interface ThumbnailGridState {
   selectedFiles: string[]
+  halfSelectedFiles: string[]
   viewMode: 'grid' | 'list'
   sortBy: 'name' | 'date' | 'size' | 'type'
   sortOrder: 'asc' | 'desc'

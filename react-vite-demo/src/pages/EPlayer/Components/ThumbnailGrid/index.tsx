@@ -14,6 +14,7 @@ interface ThumbnailGridProps {
 const ThumbnailGrid: React.FC<ThumbnailGridProps> = ({ className }) => {
   const {
     selectedFiles,
+    halfSelectedFiles,
     viewMode,
     sortBy,
     sortOrder,
@@ -186,6 +187,7 @@ const ThumbnailGrid: React.FC<ThumbnailGridProps> = ({ className }) => {
                             getThumbnailSizeClass(),
                             {
                               [styles.selected]: selectedFiles.includes(file.id),
+                              [styles.halfSelected]: !selectedFiles.includes(file.id) && halfSelectedFiles?.includes(file.id),
                               [styles.clickable]: file.type === 'image'
                             }
                           )}

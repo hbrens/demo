@@ -13,6 +13,7 @@ interface ThumbnailStore extends ThumbnailGridState {
   setSortOrder: (order: 'asc' | 'desc') => void
   setThumbnailSize: (size: 'small' | 'medium' | 'large') => void
   sortFiles: (files: FileNode[]) => FileNode[]
+  setHalfSelectedFiles: (fileIds: string[]) => void
 }
 
 export const useThumbnailStore = create<ThumbnailStore>()(
@@ -20,6 +21,7 @@ export const useThumbnailStore = create<ThumbnailStore>()(
     (set, get) => ({
       // 初始状态
       selectedFiles: [],
+      halfSelectedFiles: [],
       viewMode: 'grid',
       sortBy: 'name',
       sortOrder: 'asc',
@@ -27,6 +29,7 @@ export const useThumbnailStore = create<ThumbnailStore>()(
 
       // Actions
       setSelectedFiles: (fileIds) => set({ selectedFiles: fileIds }),
+      setHalfSelectedFiles: (fileIds) => set({ halfSelectedFiles: fileIds }),
 
       toggleFileSelection: (fileId) => {
         set((state) => {
