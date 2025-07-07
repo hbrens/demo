@@ -3,6 +3,9 @@ import cn from 'classnames'
 import { useThumbnailStore, useEPlayerStore, type FileNode } from '../../../../stores'
 import styles from './ThumbnailGrid.module.less'
 import { AutoSizer, Grid } from 'react-virtualized'
+import { AiFillFileText, AiFillFileUnknown } from 'react-icons/ai'
+import { VscFile } from 'react-icons/vsc'
+import { FaFileCode } from 'react-icons/fa'
 
 interface ThumbnailGridProps {
   className?: string
@@ -75,6 +78,14 @@ const ThumbnailGrid: React.FC<ThumbnailGridProps> = ({ className }) => {
       case 'large': return styles.large
       default: return styles.medium
     }
+  }
+
+  const getFileIcon = (file: FileNode) => {
+    const ext = file.extension?.toLowerCase()
+    if (ext === 'json') return <FaFileCode size={48} color="#f4b400" />
+    if (ext === 'txt' || ext === 'text') return <AiFillFileText size={48} color="#1890ff" />
+    if (ext === 'log') return <VscFile size={48} color="#8e44ad" />
+    return <AiFillFileUnknown size={48} color="#aaa" />
   }
 
   return (
@@ -187,13 +198,23 @@ const ThumbnailGrid: React.FC<ThumbnailGridProps> = ({ className }) => {
                           onClick={(e) => handleImageClick(file, e)}
                         >
                           <div className={styles.thumbnailImageContainer}>
-                            <img
-                              src={file.thumbnail || `https://picsum.photos/150/150?random=${file.id}`}
-                              alt={file.name}
-                              className={styles.thumbnailImage}
-                            />
-                            {file.type === 'video' && (
-                              <div className={styles.videoIndicator}>▶</div>
+                            {file.type === 'image' ? (
+                              <img
+                                src={file.thumbnail || `https://picsum.photos/150/150?random=${file.id}`}
+                                alt={file.name}
+                                className={styles.thumbnailImage}
+                              />
+                            ) : file.type === 'video' ? (
+                              <>
+                                <img
+                                  src={file.thumbnail || `https://picsum.photos/150/150?random=${file.id}`}
+                                  alt={file.name}
+                                  className={styles.thumbnailImage}
+                                />
+                                <div className={styles.videoIndicator}>▶</div>
+                              </>
+                            ) : (
+                              getFileIcon(file)
                             )}
                           </div>
                           <div className={styles.thumbnailInfo}>
