@@ -68,6 +68,7 @@ const ImageViewer = () => {
             setContainerRef={setContainerRef}
             isBottomBar={isBottomBar}
             removeImageUrl={removeImageUrl}
+            totalCount={imageUrls.length}
           />
         );
       })}

@@ -10,9 +10,10 @@ interface ImageWindowProps {
   setContainerRef: (index: number) => (el: HTMLDivElement | null) => void;
   isBottomBar: boolean;
   removeImageUrl: (index: number) => void;
+  totalCount: number;
 }
 
-const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImageUrl }: ImageWindowProps) => {
+const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImageUrl, totalCount }: ImageWindowProps) => {
   const stageRef = useRef<Konva.Stage>(null);
   const layerRef = useRef<Konva.Layer>(null);
   const imageRef = useRef<Konva.Image>(null);
@@ -111,15 +112,111 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
     }
   }
 
-  // 工具栏按钮事件
-  const handleOverlayShow = (direction: 'left' | 'right') => {
-    // direction: left 表示显示对方窗口的图片在本窗口上
-    // 这里假设只有两个窗口，index 0 和 1
-    const targetIndex = direction === 'left' ? 0 : 1;
-    const otherIndex = direction === 'left' ? 1 : 0;
-    if (index !== targetIndex) return;
-    // 发送事件，要求对方窗口把图片信息传过来
-    eventBus.emit('request-overlay-image', { targetIndex: otherIndex, showOn: index });
+  // 动态生成对比按钮
+  const renderCompareButtons = () => {
+    // 获取总窗口数
+    const total = totalCount || 2;
+    // 方向箭头 unicode
+    const icons = {
+      left: '←',
+      up: '↑',
+      right: '→',
+      down: '↓',
+      leftUp: '↖',
+      leftDown: '↙',
+      rightUp: '↗',
+      rightDown: '↘',
+    };
+    // 四宫格布局关系（按钮代表让谁的图像覆盖到我，箭头指向本窗口）
+    const fourGrid = [
+      // 0: ←(2), ↑(1), ↖(3)
+      [
+        { target: 2, icon: icons.left, title: '左侧窗口覆盖' },
+        { target: 1, icon: icons.up, title: '上方窗口覆盖' },
+        { target: 3, icon: icons.leftUp, title: '左上窗口覆盖' },
+      ],
+      // 1: →(3), ↑(0), ↗(2)
+      [
+        { target: 3, icon: icons.right, title: '右侧窗口覆盖' },
+        { target: 0, icon: icons.up, title: '上方窗口覆盖' },
+        { target: 2, icon: icons.rightUp, title: '右上窗口覆盖' },
+      ],
+      // 2: ↓(0), ←(3), ↙(1)
+      [
+        { target: 0, icon: icons.down, title: '下方窗口覆盖' },
+        { target: 3, icon: icons.left, title: '左侧窗口覆盖' },
+        { target: 1, icon: icons.leftDown, title: '左下窗口覆盖' },
+      ],
+      // 3: ↓(1), →(2), ↘(0)
+      [
+        { target: 1, icon: icons.down, title: '下方窗口覆盖' },
+        { target: 2, icon: icons.right, title: '右侧窗口覆盖' },
+        { target: 0, icon: icons.rightDown, title: '右下窗口覆盖' },
+      ],
+    ];
+    // 三窗口布局（假设顺时针排列）
+    const threeGrid = [
+      // 0: 右、下、左下
+      [
+        { target: 1, icon: icons.right, title: '对比窗口2' },
+        { target: 2, icon: icons.down, title: '对比窗口3' },
+      ],
+      // 1: 左、右下、下
+      [
+        { target: 0, icon: icons.left, title: '对比窗口1' },
+        { target: 2, icon: icons.rightDown, title: '对比窗口3' },
+      ],
+      // 2: 上、左上
+      [
+        { target: 0, icon: icons.up, title: '对比窗口1' },
+        { target: 1, icon: icons.leftUp, title: '对比窗口2' },
+      ],
+    ];
+    // 生成按钮配置
+    let configs: { icon: string; title: string; target: number; key: string }[] = [];
+    if (total === 2) {
+      // 两窗口，互相对比
+      configs = [
+        {
+          icon: index === 0 ? icons.right : icons.left,
+          title: `对比窗口${index === 0 ? 2 : 1}`,
+          target: index === 0 ? 1 : 0,
+          key: `${index}-${index === 0 ? 1 : 0}`,
+        },
+      ];
+    } else if (total === 3) {
+      configs = threeGrid[index].map(cfg => ({ ...cfg, key: `${index}-${cfg.target}` }));
+    } else if (total === 4) {
+      configs = fourGrid[index].map(cfg => ({ ...cfg, key: `${index}-${cfg.target}` }));
+    } else {
+      // 其它数量，简单全部对比
+      for (let i = 0; i < total; i++) {
+        if (i === index) continue;
+        configs.push({
+          icon: icons.right,
+          title: `对比窗口${i + 1}`,
+          target: i,
+          key: `${index}-${i}`,
+        });
+      }
+    }
+    // 渲染按钮
+    return configs.map(cfg => (
+      <button
+        key={cfg.key}
+        onMouseDown={() => handleOverlayShow(cfg.target)}
+        onMouseUp={handleOverlayHide}
+        onMouseLeave={handleOverlayHide}
+        style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, color: '#888' }}
+        title={cfg.title}
+      >{cfg.icon}</button>
+    ));
+  };
+
+  // 修改 handleOverlayShow 支持目标窗口 index（让 target 的图像覆盖到我）
+  const handleOverlayShow = (targetIndex: number) => {
+    if (index === targetIndex) return;
+    eventBus.emit('request-overlay-image', { targetIndex, showOn: index });
   };
   const handleOverlayHide = () => {
     // 本地复原
@@ -361,25 +458,7 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
       <div className="image-window-toolbar" style={{ height: 40, background: '#f5f5f5', borderBottom: isBottomBar ? undefined : '1px solid #ddd', borderTop: isBottomBar ? '1px solid #ddd' : undefined, display: 'flex', alignItems: 'center', padding: '0 16px', justifyContent: 'space-between' }}>
         <span style={{ fontWeight: 'bold' }}>{`窗口${index + 1}`}</span>
         <div style={{ display: 'flex', gap: 8 }}>
-          {/* 左右按钮，分别在窗口1和窗口2显示 */}
-          {index === 0 && (
-            <button
-              onMouseDown={() => handleOverlayShow('left')}
-              onMouseUp={handleOverlayHide}
-              onMouseLeave={handleOverlayHide}
-              style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, color: '#888' }}
-              title="覆盖对比窗口2"
-            >←</button>
-          )}
-          {index === 1 && (
-            <button
-              onMouseDown={() => handleOverlayShow('right')}
-              onMouseUp={handleOverlayHide}
-              onMouseLeave={handleOverlayHide}
-              style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, color: '#888' }}
-              title="覆盖对比窗口1"
-            >→</button>
-          )}
+          {renderCompareButtons()}
           <button onClick={() => removeImageUrl(index)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, color: '#888' }} title="关闭">✖</button>
         </div>
       </div>

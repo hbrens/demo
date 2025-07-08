@@ -4,8 +4,8 @@ import { create } from 'zustand'
 const initialImageUrls = [
   'http://127.0.0.1:8080/b67a7d25bacfb81a32e568696f9f694c.jpg',
   'http://127.0.0.1:8080/0f04af422502a40b6c8dc19d53d1f348.jpg',
-  // 'http://127.0.0.1:8080/3dd2519cf0d935fa9de4431d4e28d922.jpg',
-  // 'http://127.0.0.1:8080/78c0715fb026991310d1668d7a025623.jpg',
+  'http://127.0.0.1:8080/3dd2519cf0d935fa9de4431d4e28d922.jpg',
+  'http://127.0.0.1:8080/78c0715fb026991310d1668d7a025623.jpg',
 ];
 
 interface ImageViewerStore {
