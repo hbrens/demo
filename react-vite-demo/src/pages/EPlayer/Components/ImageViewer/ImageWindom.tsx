@@ -54,8 +54,8 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
   ) {
     e.evt.preventDefault();
     if (!isDraggingRef.current || !imageRef.current) return;
-    // 获取当前缩放比例
-    const scale = stageRef.current ? stageRef.current.scaleX() : 1;
+    // 获取当前缩放比例（layer）
+    const scale = layerRef.current ? layerRef.current.scaleX() : 1;
     // 鼠标移动距离要除以缩放比例
     const delta = {
       x: (e.evt.clientX - positionRef.current.x) / scale,
@@ -76,32 +76,35 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
   function handleWheel(
     e: Konva.KonvaEventObject<WheelEvent>,
     stageRef: MutableRefObject<Konva.Stage | null>,
+    layerRef: MutableRefObject<Konva.Layer | null>,
     scaleBy: number,
     index: number
   ) {
     e.evt.preventDefault();
-    const oldScale = stageRef.current!.scaleX();
-    const pointer = stageRef.current!.getPointerPosition();
+    if (!layerRef.current || !stageRef.current) return;
+    const oldScale = layerRef.current.scaleX();
+    const pointer = stageRef.current.getPointerPosition();
     const direction = e.evt.deltaY > 0 ? -1 : 1;
-    // 通知其他窗口
-    if (!e.evt.ctrlKey) {
-      eventBus.emit('imagewindow-scale', { index, direction });
+    if (!e.evt.ctrlKey && pointer) {
+      // 发送 pointer 信息
+      eventBus.emit('imagewindow-scale', { index, direction, pointer });
     }
-  
-    // 自己处理缩放
+
     const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
     if (pointer) {
+      // pointer 是相对于 stage 的，需要转换为 layer 的本地坐标
+      const layerPos = layerRef.current.position();
       const mousePointTo = {
-        x: (pointer.x - stageRef.current!.x()) / oldScale,
-        y: (pointer.y - stageRef.current!.y()) / oldScale,
+        x: (pointer.x - layerPos.x) / oldScale,
+        y: (pointer.y - layerPos.y) / oldScale,
       };
-      stageRef.current!.scale({ x: newScale, y: newScale });
+      layerRef.current.scale({ x: newScale, y: newScale });
       const newPos = {
         x: pointer.x - mousePointTo.x * newScale,
         y: pointer.y - mousePointTo.y * newScale,
       };
-      stageRef.current!.position(newPos);
-      stageRef.current!.batchDraw();
+      layerRef.current.position(newPos);
+      layerRef.current.batchDraw();
     }
   }
 
@@ -119,8 +122,8 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
       if (payload.index === index) return;
       if (!isDraggingRef.current || !imageRef.current) return;
       const { delta } = payload;
-      // 获取当前缩放比例
-      const scale = stageRef.current ? stageRef.current.scaleX() : 1;
+      // 获取当前缩放比例（layer）
+      const scale = layerRef.current ? layerRef.current.scaleX() : 1;
       // delta 需要除以 scale
       imageRef.current.position({
         x: imageStartPosRef.current.x + delta.x / scale,
@@ -136,26 +139,24 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
     };
     const onScale = (payload: any) => {
       if (payload.index === index) return;
-      const { direction } = payload;
-      // 只处理放大/缩小
-      if (!stageRef.current) return;
-      const oldScale = stageRef.current.scaleX();
+      const { direction, pointer } = payload;
+      if (!layerRef.current || !stageRef.current) return;
+      const oldScale = layerRef.current.scaleX();
       const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
-      // 用舞台中心点作为缩放中心
-      const containerWidth = stageRef.current.width();
-      const containerHeight = stageRef.current.height();
-      const pointer = { x: containerWidth / 2, y: containerHeight / 2 };
-      const mousePointTo = {
-        x: (pointer.x - stageRef.current.x()) / oldScale,
-        y: (pointer.y - stageRef.current.y()) / oldScale,
-      };
-      stageRef.current.scale({ x: newScale, y: newScale });
-      const newPos = {
-        x: pointer.x - mousePointTo.x * newScale,
-        y: pointer.y - mousePointTo.y * newScale,
-      };
-      stageRef.current.position(newPos);
-      stageRef.current.batchDraw();
+      if (pointer) {
+        const layerPos = layerRef.current.position();
+        const mousePointTo = {
+          x: (pointer.x - layerPos.x) / oldScale,
+          y: (pointer.y - layerPos.y) / oldScale,
+        };
+        layerRef.current.scale({ x: newScale, y: newScale });
+        const newPos = {
+          x: pointer.x - mousePointTo.x * newScale,
+          y: pointer.y - mousePointTo.y * newScale,
+        };
+        layerRef.current.position(newPos);
+        layerRef.current.batchDraw();
+      }
     };
     eventBus.on('imagewindow-mousedown', onMouseDown);
     eventBus.on('imagewindow-mousemove', onMouseMove);
@@ -215,7 +216,7 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
       };
 
       stageRef.current.on('wheel', (e) => {
-        handleWheel(e, stageRef, scaleBy, index);
+        handleWheel(e, stageRef, layerRef, scaleBy, index);
       });
 
       stageRef.current.on('mousedown', (e) => {
