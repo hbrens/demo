@@ -23,6 +23,9 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
   const positionRef = useRef({ x: 0, y: 0 });
   // 缩放因子
   const scaleBy = 1.05;
+  // 新增：覆盖层和图片引用
+  const overlayLayerRef = useRef<Konva.Layer>(null);
+  const overlayImageRef = useRef<Konva.Image>(null);
 
   // 拖动相关
   function handleMouseDown(
@@ -108,6 +111,30 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
     }
   }
 
+  // 工具栏按钮事件
+  const handleOverlayShow = (direction: 'left' | 'right') => {
+    // direction: left 表示显示对方窗口的图片在本窗口上
+    // 这里假设只有两个窗口，index 0 和 1
+    const targetIndex = direction === 'left' ? 0 : 1;
+    const otherIndex = direction === 'left' ? 1 : 0;
+    if (index !== targetIndex) return;
+    // 发送事件，要求对方窗口把图片信息传过来
+    eventBus.emit('request-overlay-image', { targetIndex: otherIndex, showOn: index });
+  };
+  const handleOverlayHide = () => {
+    // 本地复原
+    overlayImageRef.current && overlayImageRef.current.visible(false);
+    overlayLayerRef.current && overlayLayerRef.current.visible(false);
+    overlayLayerRef.current && overlayLayerRef.current.draw();
+    if (imageRef.current) {
+      imageRef.current.visible(true);
+      layerRef.current && layerRef.current.draw();
+    }
+    // 通知对方窗口复原
+    const otherIndex = index === 0 ? 1 : 0;
+    eventBus.emit('hide-overlay-image', { targetIndex: otherIndex });
+  };
+
   // 事件总线接收函数
   useEffect(() => {
     const onMouseDown = (payload: any) => {
@@ -158,15 +185,71 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
         layerRef.current.batchDraw();
       }
     };
+    const onRequestOverlayImage = (payload: any) => {
+      // 如果是发给我的，发送自己的图片信息给对方
+      if (payload.targetIndex !== index) return;
+      // 发送 show-overlay-image 事件，带上图片、位置、缩放等
+      if (!imageRef.current) return;
+      const imageObj = imageRef.current.image();
+      const position = imageRef.current.position();
+      const size = { width: imageRef.current.width(), height: imageRef.current.height() };
+      const scale = layerRef.current ? layerRef.current.scaleX() : 1;
+      eventBus.emit('show-overlay-image', {
+        targetIndex: payload.showOn,
+        imageObj,
+        position,
+        size,
+        scale,
+      });
+    };
+    const onShowOverlayImage = (payload: any) => {
+      if (payload.targetIndex !== index) return;
+      // 设置 overlayImage
+      if (!overlayImageRef.current) return;
+      overlayImageRef.current.image(payload.imageObj);
+      overlayImageRef.current.width(payload.size.width);
+      overlayImageRef.current.height(payload.size.height);
+      overlayImageRef.current.position(payload.position);
+      overlayImageRef.current.opacity(1);
+      overlayImageRef.current.visible(true);
+      // 同步缩放
+      if (overlayLayerRef.current) {
+        overlayLayerRef.current.scale({ x: payload.scale, y: payload.scale });
+        overlayLayerRef.current.visible(true);
+        overlayLayerRef.current.draw();
+      }
+      // 新增：隐藏本窗口主图片
+      if (imageRef.current) {
+        imageRef.current.visible(false);
+        layerRef.current && layerRef.current.draw();
+      }
+    };
+    const onHideOverlayImage = (payload: any) => {
+      if (payload.targetIndex !== index) return;
+      overlayImageRef.current && overlayImageRef.current.visible(false);
+      overlayLayerRef.current && overlayLayerRef.current.visible(false);
+      overlayLayerRef.current && overlayLayerRef.current.draw();
+      // 新增：恢复本窗口主图片显示
+      if (imageRef.current) {
+        imageRef.current.visible(true);
+        layerRef.current && layerRef.current.draw();
+      }
+    };
     eventBus.on('imagewindow-mousedown', onMouseDown);
     eventBus.on('imagewindow-mousemove', onMouseMove);
     eventBus.on('imagewindow-mouseup', onMouseUp);
     eventBus.on('imagewindow-scale', onScale);
+    eventBus.on('request-overlay-image', onRequestOverlayImage);
+    eventBus.on('show-overlay-image', onShowOverlayImage);
+    eventBus.on('hide-overlay-image', onHideOverlayImage);
     return () => {
       eventBus.off('imagewindow-mousedown', onMouseDown);
       eventBus.off('imagewindow-mousemove', onMouseMove);
       eventBus.off('imagewindow-mouseup', onMouseUp);
       eventBus.off('imagewindow-scale', onScale);
+      eventBus.off('request-overlay-image', onRequestOverlayImage);
+      eventBus.off('show-overlay-image', onShowOverlayImage);
+      eventBus.off('hide-overlay-image', onHideOverlayImage);
     };
   }, [index]);
 
@@ -179,28 +262,29 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
       });
       layerRef.current = new Konva.Layer();
       stageRef.current.add(layerRef.current);
+      // 新增：初始化 overlayLayer
+      overlayLayerRef.current = new Konva.Layer();
+      stageRef.current.add(overlayLayerRef.current);
+      overlayLayerRef.current.zIndex(1); // 保证在主图层上方
+      overlayLayerRef.current.visible(false); // 默认隐藏
+
       const image = new Image();
       image.src = imageUrl;
       image.onload = () => {
-
         if (!layerRef.current || !stageRef.current) return;
-      
         // 创建Konva图片对象
         imageRef.current = new Konva.Image({
           image: image,
           draggable: false
         });
-
         // 计算图片缩放以适应容器
         const containerWidth = stageRef.current.width();
         const containerHeight = stageRef.current.height();
         const imageWidth = image.width;
         const imageHeight = image.height;
-
         const scaleX = containerWidth / imageWidth;
         const scaleY = containerHeight / imageHeight;
         const scale = Math.min(scaleX, scaleY);
-
         // 设置图片大小和位置
         imageRef.current.width(imageWidth * scale);
         imageRef.current.height(imageHeight * scale);
@@ -208,12 +292,19 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
           x: (containerWidth - imageWidth * scale) / 2,
           y: (containerHeight - imageHeight * scale) / 2
         });
-
         layerRef.current.destroyChildren();
         layerRef.current.add(imageRef.current);
-
         layerRef.current.draw();
       };
+      // 新增：初始化 overlayImage
+      overlayImageRef.current = new Konva.Image({
+        image: undefined, // 必须传递 image 属性，初始为 undefined
+        visible: false,
+        opacity: 1, // 完全不透明，直接覆盖
+        draggable: false
+      });
+      overlayLayerRef.current.add(overlayImageRef.current);
+      overlayLayerRef.current.draw();
 
       stageRef.current.on('wheel', (e) => {
         handleWheel(e, stageRef, layerRef, scaleBy, index);
@@ -269,7 +360,28 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
       {/* 工具栏 */}
       <div className="image-window-toolbar" style={{ height: 40, background: '#f5f5f5', borderBottom: isBottomBar ? undefined : '1px solid #ddd', borderTop: isBottomBar ? '1px solid #ddd' : undefined, display: 'flex', alignItems: 'center', padding: '0 16px', justifyContent: 'space-between' }}>
         <span style={{ fontWeight: 'bold' }}>{`窗口${index + 1}`}</span>
-        <button onClick={() => removeImageUrl(index)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, color: '#888' }} title="关闭">✖</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {/* 左右按钮，分别在窗口1和窗口2显示 */}
+          {index === 0 && (
+            <button
+              onMouseDown={() => handleOverlayShow('left')}
+              onMouseUp={handleOverlayHide}
+              onMouseLeave={handleOverlayHide}
+              style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, color: '#888' }}
+              title="覆盖对比窗口2"
+            >←</button>
+          )}
+          {index === 1 && (
+            <button
+              onMouseDown={() => handleOverlayShow('right')}
+              onMouseUp={handleOverlayHide}
+              onMouseLeave={handleOverlayHide}
+              style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, color: '#888' }}
+              title="覆盖对比窗口1"
+            >→</button>
+          )}
+          <button onClick={() => removeImageUrl(index)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, color: '#888' }} title="关闭">✖</button>
+        </div>
       </div>
       {/* 图片区域 */}
       <div className="image-window-content" style={{ height: 'calc(100% - 40px)', position: 'relative', overflow: 'hidden' }}>
