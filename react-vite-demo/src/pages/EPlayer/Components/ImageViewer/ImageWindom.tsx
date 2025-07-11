@@ -27,6 +27,8 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
   // 新增：覆盖层和图片引用
   const overlayLayerRef = useRef<Konva.Layer>(null);
   const overlayImageRef = useRef<Konva.Image>(null);
+  // 新增：旋转状态
+  const [rotation, setRotation] = useState(0);
 
   // 拖动相关
   function handleMouseDown(
@@ -117,6 +119,30 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
       layerRef.current && layerRef.current.batchDraw();
     }
   }
+
+  // 新增：旋转相关函数
+  const rotateImage = (direction: 'left' | 'right') => {
+    if (!imageRef.current || !stageRef.current) return;
+    
+    const currentRotation = imageRef.current.rotation();
+    const newRotation = direction === 'left' ? currentRotation - 90 : currentRotation + 90;
+    
+    // 获取图片当前位置（现在position就是旋转中心点的坐标）
+    const imagePos = imageRef.current.position();
+    
+    // 设置图片的旋转中心点（相对于图片本身）
+    imageRef.current.offsetX(imageRef.current.width() / 2);
+    imageRef.current.offsetY(imageRef.current.height() / 2);
+    
+    // 设置新的旋转角度
+    imageRef.current.rotation(newRotation);
+    
+    // 位置保持不变，因为position已经是旋转中心点的坐标
+    imageRef.current.position(imagePos);
+    
+    setRotation(newRotation);
+    layerRef.current && layerRef.current.batchDraw();
+  };
 
   // 动态生成对比按钮
   const renderCompareButtons = () => {
@@ -302,12 +328,14 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
       const position = imageRef.current.position();
       const size = { width: imageRef.current.width(), height: imageRef.current.height() };
       const scale = imageRef.current.scaleX(); // 使用图片的缩放而不是layer的缩放
+      const rotation = imageRef.current.rotation(); // 添加旋转信息
       eventBus.emit('show-overlay-image', {
         targetIndex: payload.showOn,
         imageObj,
         position,
         size,
         scale,
+        rotation, // 传递旋转信息
       });
     };
     const onShowOverlayImage = (payload: any) => {
@@ -317,8 +345,18 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
       overlayImageRef.current.image(payload.imageObj);
       overlayImageRef.current.width(payload.size.width);
       overlayImageRef.current.height(payload.size.height);
-      overlayImageRef.current.position(payload.position);
+      // 设置overlayImage的旋转中心点
+      overlayImageRef.current.offsetX(payload.size.width / 2);
+      overlayImageRef.current.offsetY(payload.size.height / 2);
+      // 重新计算位置，因为设置了offset后，position变成了旋转中心点的坐标
+      const centerX = payload.position.x + (payload.size.width * payload.scale) / 2;
+      const centerY = payload.position.y + (payload.size.height * payload.scale) / 2;
+      overlayImageRef.current.position({
+        x: centerX,
+        y: centerY
+      });
       overlayImageRef.current.scale({ x: payload.scale, y: payload.scale }); // 直接设置图片缩放
+      overlayImageRef.current.rotation(payload.rotation || 0); // 设置旋转角度
       overlayImageRef.current.opacity(1);
       overlayImageRef.current.visible(true);
       // 确保overlayLayer可见
@@ -397,9 +435,16 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
         imageRef.current.width(imageWidth);
         imageRef.current.height(imageHeight);
         imageRef.current.scale({ x: scale, y: scale });
+        // 设置图片的旋转中心点（相对于图片本身）
+        imageRef.current.offsetX(imageWidth / 2);
+        imageRef.current.offsetY(imageHeight / 2);
+        imageRef.current.rotation(rotation); // 设置初始旋转角度
+        // 重新计算位置，因为设置了offset后，position变成了旋转中心点的坐标
+        const centerX = (containerWidth - imageWidth * scale) / 2 + (imageWidth * scale) / 2;
+        const centerY = (containerHeight - imageHeight * scale) / 2 + (imageHeight * scale) / 2;
         imageRef.current.position({
-          x: (containerWidth - imageWidth * scale) / 2,
-          y: (containerHeight - imageHeight * scale) / 2
+          x: centerX,
+          y: centerY
         });
         layerRef.current.destroyChildren();
         layerRef.current.add(imageRef.current);
@@ -412,6 +457,9 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
         opacity: 1, // 完全不透明，直接覆盖
         draggable: false
       });
+      // 设置overlayImage的旋转中心点
+      overlayImageRef.current.offsetX(0);
+      overlayImageRef.current.offsetY(0);
       overlayLayerRef.current.add(overlayImageRef.current);
       overlayLayerRef.current.draw();
 
@@ -471,6 +519,21 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
         <span style={{ fontWeight: 'bold' }}>{`窗口${index + 1}`}</span>
         <div style={{ display: 'flex', gap: 8 }}>
           {renderCompareButtons()}
+          {/* 新增：旋转按钮 */}
+          <button 
+            onClick={() => rotateImage('left')} 
+            style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, color: '#888' }} 
+            title="向左旋转90度"
+          >
+            ↶
+          </button>
+          <button 
+            onClick={() => rotateImage('right')} 
+            style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, color: '#888' }} 
+            title="向右旋转90度"
+          >
+            ↷
+          </button>
           <button onClick={() => removeImageUrl(index)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, color: '#888' }} title="关闭">✖</button>
         </div>
       </div>
