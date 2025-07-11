@@ -107,14 +107,32 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
         y: (pointer.y - imagePos.y) / oldScale,
       };
       
-      // 设置图片缩放
-      imageRef.current.scale({ x: newScale, y: newScale });
+      // 混合缩放方案：根据缩放比例选择缩放方式
+      if (newScale >= 1.0) {
+        // 放大时使用 width/height 以获得更好的图像质量
+        const newWidth = imageWidth * newScale;
+        const newHeight = imageHeight * newScale;
+        imageRef.current.width(newWidth);
+        imageRef.current.height(newHeight);
+        // 重新设置旋转中心点
+        imageRef.current.offsetX(newWidth / 2);
+        imageRef.current.offsetY(newHeight / 2);
+        // 重置scale为1
+        imageRef.current.scale({ x: 1, y: 1 });
+      } else {
+        // 缩小时使用 scale 以获得更好的性能
+        imageRef.current.scale({ x: newScale, y: newScale });
+      }
       
       // 计算新的位置，保持鼠标位置不变
+      const newImageWidth = imageRef.current.width() * imageRef.current.scaleX();
+      const newImageHeight = imageRef.current.height() * imageRef.current.scaleY();
+      
       const newPos = {
         x: pointer.x - mousePointTo.x * newScale,
         y: pointer.y - mousePointTo.y * newScale,
       };
+      
       imageRef.current.position(newPos);
       layerRef.current && layerRef.current.batchDraw();
     }
@@ -131,8 +149,10 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
     const imagePos = imageRef.current.position();
     
     // 设置图片的旋转中心点（相对于图片本身）
-    imageRef.current.offsetX(imageRef.current.width() / 2);
-    imageRef.current.offsetY(imageRef.current.height() / 2);
+    const imageWidth = imageRef.current.width();
+    const imageHeight = imageRef.current.height();
+    imageRef.current.offsetX(imageWidth / 2);
+    imageRef.current.offsetY(imageHeight / 2);
     
     // 设置新的旋转角度
     imageRef.current.rotation(newRotation);
@@ -300,6 +320,8 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
       if (pointer) {
         // 获取图片当前位置
         const imagePos = imageRef.current.position();
+        const imageWidth = imageRef.current.width();
+        const imageHeight = imageRef.current.height();
         
         // 计算鼠标相对于图片的位置
         const mousePointTo = {
@@ -307,14 +329,32 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
           y: (pointer.y - imagePos.y) / oldScale,
         };
         
-        // 设置图片缩放
-        imageRef.current.scale({ x: newScale, y: newScale });
+        // 混合缩放方案：根据缩放比例选择缩放方式
+        if (newScale >= 1.0) {
+          // 放大时使用 width/height 以获得更好的图像质量
+          const newWidth = imageWidth * newScale;
+          const newHeight = imageHeight * newScale;
+          imageRef.current.width(newWidth);
+          imageRef.current.height(newHeight);
+          // 重新设置旋转中心点
+          imageRef.current.offsetX(newWidth / 2);
+          imageRef.current.offsetY(newHeight / 2);
+          // 重置scale为1
+          imageRef.current.scale({ x: 1, y: 1 });
+        } else {
+          // 缩小时使用 scale 以获得更好的性能
+          imageRef.current.scale({ x: newScale, y: newScale });
+        }
         
         // 计算新的位置，保持鼠标位置不变
+        const newImageWidth = imageRef.current.width() * imageRef.current.scaleX();
+        const newImageHeight = imageRef.current.height() * imageRef.current.scaleY();
+        
         const newPos = {
           x: pointer.x - mousePointTo.x * newScale,
           y: pointer.y - mousePointTo.y * newScale,
         };
+        
         imageRef.current.position(newPos);
         layerRef.current && layerRef.current.batchDraw();
       }
@@ -327,7 +367,13 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
       const imageObj = imageRef.current.image();
       const position = imageRef.current.position();
       const size = { width: imageRef.current.width(), height: imageRef.current.height() };
-      const scale = imageRef.current.scaleX(); // 使用图片的缩放而不是layer的缩放
+      // 计算实际的缩放比例
+      const actualScale = imageRef.current.scaleX();
+      // 如果scale是1，说明使用了width/height缩放，需要计算实际缩放比例
+      const imageElement = imageObj as HTMLImageElement;
+      const scale = actualScale === 1 ? 
+        imageRef.current.width() / imageElement.width : 
+        actualScale;
       const rotation = imageRef.current.rotation(); // 添加旋转信息
       eventBus.emit('show-overlay-image', {
         targetIndex: payload.showOn,
@@ -349,13 +395,27 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
       overlayImageRef.current.offsetX(payload.size.width / 2);
       overlayImageRef.current.offsetY(payload.size.height / 2);
       // 重新计算位置，因为设置了offset后，position变成了旋转中心点的坐标
-      const centerX = payload.position.x + (payload.size.width * payload.scale) / 2;
-      const centerY = payload.position.y + (payload.size.height * payload.scale) / 2;
+      const centerX = payload.position.x;
+      const centerY = payload.position.y;
       overlayImageRef.current.position({
         x: centerX,
         y: centerY
       });
-      overlayImageRef.current.scale({ x: payload.scale, y: payload.scale }); // 直接设置图片缩放
+      // 应用缩放：根据缩放比例选择缩放方式
+      if (payload.scale >= 1.0) {
+        // 放大时使用 width/height
+        const newWidth = payload.size.width * payload.scale;
+        const newHeight = payload.size.height * payload.scale;
+        overlayImageRef.current.width(newWidth);
+        overlayImageRef.current.height(newHeight);
+        // 重新设置旋转中心点
+        overlayImageRef.current.offsetX(newWidth / 2);
+        overlayImageRef.current.offsetY(newHeight / 2);
+        overlayImageRef.current.scale({ x: 1, y: 1 });
+      } else {
+        // 缩小时使用 scale
+        overlayImageRef.current.scale({ x: payload.scale, y: payload.scale });
+      }
       overlayImageRef.current.rotation(payload.rotation || 0); // 设置旋转角度
       overlayImageRef.current.opacity(1);
       overlayImageRef.current.visible(true);
