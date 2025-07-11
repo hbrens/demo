@@ -58,12 +58,10 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
   ) {
     e.evt.preventDefault();
     if (!isDraggingRef.current || !imageRef.current) return;
-    // 获取当前缩放比例（layer）
-    const scale = layerRef.current ? layerRef.current.scaleX() : 1;
-    // 鼠标移动距离要除以缩放比例
+    // 直接计算鼠标移动距离，不需要除以缩放比例
     const delta = {
-      x: (e.evt.clientX - positionRef.current.x) / scale,
-      y: (e.evt.clientY - positionRef.current.y) / scale
+      x: e.evt.clientX - positionRef.current.x,
+      y: e.evt.clientY - positionRef.current.y
     };
     imageRef.current.position({
       x: imageStartPosRef.current.x + delta.x,
@@ -85,8 +83,8 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
     index: number
   ) {
     e.evt.preventDefault();
-    if (!layerRef.current || !stageRef.current) return;
-    const oldScale = layerRef.current.scaleX();
+    if (!imageRef.current || !stageRef.current) return;
+    const oldScale = imageRef.current.scaleX();
     const pointer = stageRef.current.getPointerPosition();
     const direction = e.evt.deltaY > 0 ? -1 : 1;
     if (!e.evt.ctrlKey && pointer) {
@@ -96,19 +94,27 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
 
     const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
     if (pointer) {
-      // pointer 是相对于 stage 的，需要转换为 layer 的本地坐标
-      const layerPos = layerRef.current.position();
+      // 获取图片当前位置
+      const imagePos = imageRef.current.position();
+      const imageWidth = imageRef.current.width();
+      const imageHeight = imageRef.current.height();
+      
+      // 计算鼠标相对于图片的位置
       const mousePointTo = {
-        x: (pointer.x - layerPos.x) / oldScale,
-        y: (pointer.y - layerPos.y) / oldScale,
+        x: (pointer.x - imagePos.x) / oldScale,
+        y: (pointer.y - imagePos.y) / oldScale,
       };
-      layerRef.current.scale({ x: newScale, y: newScale });
+      
+      // 设置图片缩放
+      imageRef.current.scale({ x: newScale, y: newScale });
+      
+      // 计算新的位置，保持鼠标位置不变
       const newPos = {
         x: pointer.x - mousePointTo.x * newScale,
         y: pointer.y - mousePointTo.y * newScale,
       };
-      layerRef.current.position(newPos);
-      layerRef.current.batchDraw();
+      imageRef.current.position(newPos);
+      layerRef.current && layerRef.current.batchDraw();
     }
   }
 
@@ -246,12 +252,10 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
       if (payload.index === index) return;
       if (!isDraggingRef.current || !imageRef.current) return;
       const { delta } = payload;
-      // 获取当前缩放比例（layer）
-      const scale = layerRef.current ? layerRef.current.scaleX() : 1;
-      // delta 需要除以 scale
+      // 直接使用delta，不需要除以缩放比例
       imageRef.current.position({
-        x: imageStartPosRef.current.x + delta.x / scale,
-        y: imageStartPosRef.current.y + delta.y / scale
+        x: imageStartPosRef.current.x + delta.x,
+        y: imageStartPosRef.current.y + delta.y
       });
       stageRef.current && stageRef.current.batchDraw();
       console.log(`[窗口${index}] 收到拖拽事件`, payload.delta);
@@ -264,22 +268,29 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
     const onScale = (payload: any) => {
       if (payload.index === index) return;
       const { direction, pointer } = payload;
-      if (!layerRef.current || !stageRef.current) return;
-      const oldScale = layerRef.current.scaleX();
+      if (!imageRef.current || !stageRef.current) return;
+      const oldScale = imageRef.current.scaleX();
       const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
       if (pointer) {
-        const layerPos = layerRef.current.position();
+        // 获取图片当前位置
+        const imagePos = imageRef.current.position();
+        
+        // 计算鼠标相对于图片的位置
         const mousePointTo = {
-          x: (pointer.x - layerPos.x) / oldScale,
-          y: (pointer.y - layerPos.y) / oldScale,
+          x: (pointer.x - imagePos.x) / oldScale,
+          y: (pointer.y - imagePos.y) / oldScale,
         };
-        layerRef.current.scale({ x: newScale, y: newScale });
+        
+        // 设置图片缩放
+        imageRef.current.scale({ x: newScale, y: newScale });
+        
+        // 计算新的位置，保持鼠标位置不变
         const newPos = {
           x: pointer.x - mousePointTo.x * newScale,
           y: pointer.y - mousePointTo.y * newScale,
         };
-        layerRef.current.position(newPos);
-        layerRef.current.batchDraw();
+        imageRef.current.position(newPos);
+        layerRef.current && layerRef.current.batchDraw();
       }
     };
     const onRequestOverlayImage = (payload: any) => {
@@ -290,7 +301,7 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
       const imageObj = imageRef.current.image();
       const position = imageRef.current.position();
       const size = { width: imageRef.current.width(), height: imageRef.current.height() };
-      const scale = layerRef.current ? layerRef.current.scaleX() : 1;
+      const scale = imageRef.current.scaleX(); // 使用图片的缩放而不是layer的缩放
       eventBus.emit('show-overlay-image', {
         targetIndex: payload.showOn,
         imageObj,
@@ -307,11 +318,11 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
       overlayImageRef.current.width(payload.size.width);
       overlayImageRef.current.height(payload.size.height);
       overlayImageRef.current.position(payload.position);
+      overlayImageRef.current.scale({ x: payload.scale, y: payload.scale }); // 直接设置图片缩放
       overlayImageRef.current.opacity(1);
       overlayImageRef.current.visible(true);
-      // 同步缩放
+      // 确保overlayLayer可见
       if (overlayLayerRef.current) {
-        overlayLayerRef.current.scale({ x: payload.scale, y: payload.scale });
         overlayLayerRef.current.visible(true);
         overlayLayerRef.current.draw();
       }
@@ -382,9 +393,10 @@ const ImageWindow = ({ imageUrl, index, setContainerRef, isBottomBar, removeImag
         const scaleX = containerWidth / imageWidth;
         const scaleY = containerHeight / imageHeight;
         const scale = Math.min(scaleX, scaleY);
-        // 设置图片大小和位置
-        imageRef.current.width(imageWidth * scale);
-        imageRef.current.height(imageHeight * scale);
+        // 设置图片原始尺寸和缩放
+        imageRef.current.width(imageWidth);
+        imageRef.current.height(imageHeight);
+        imageRef.current.scale({ x: scale, y: scale });
         imageRef.current.position({
           x: (containerWidth - imageWidth * scale) / 2,
           y: (containerHeight - imageHeight * scale) / 2
