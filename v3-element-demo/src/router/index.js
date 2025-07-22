@@ -3,7 +3,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 const routes = [
   {
     path: '/',
-    redirect: '/ag-grid2',
+    redirect: '/img',
   },
   {
     path: '/editor',
@@ -29,6 +29,11 @@ const routes = [
     path: '/el-table',
     name: 'el-table',
     component: () => import('@/views/el-table-view/index.vue')
+  },
+  {
+    path: '/img',
+    name: '/img',
+    component: () => import('@/views/img-compare/index.vue')
   }
 
 ]

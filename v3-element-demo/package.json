@@ -14,6 +14,7 @@
     "@visactor/vtable-editors": "^1.17.5",
     "@visactor/vue-vtable": "^1.17.5",
     "@vueuse/core": "^11.0.3",
+    "@vueuse/gesture": "^2.0.0",
     "ag-grid-community": "^33.2.2",
     "ag-grid-vue3": "^33.2.2",
     "element-plus": "^2.8.2",
