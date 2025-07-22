@@ -31,10 +31,6 @@ const konvaImageLayer = ref(null)
 const konvaAnnotationLayer = ref(null)
 const konvaImage = ref(null)
 
-// 移动端尺寸
-// const stageWidth = 360
-// const stageHeight = 360
-
 const getStageSize = () => {
   if (!stageContainer.value) return { width: 360, height: 360 }
   const rect = stageContainer.value.getBoundingClientRect()
@@ -49,10 +45,10 @@ function renderAnnotations(imgObj) {
   konvaAnnotationLayer.value.destroyChildren()
   if (!konvaImage.value) return
   imgObj.boxes.forEach(box => {
-    const x = konvaImage.value.x() + box.x1 * konvaImage.value.width() * konvaImage.value.scaleX()
-    const y = konvaImage.value.y() + box.y1 * konvaImage.value.height() * konvaImage.value.scaleY()
-    const w = (box.x2 - box.x1) * konvaImage.value.width() * konvaImage.value.scaleX()
-    const h = (box.y2 - box.y1) * konvaImage.value.height() * konvaImage.value.scaleY()
+    const x = konvaImage.value.x() + box.x1 * konvaImage.value.width()
+    const y = konvaImage.value.y() + box.y1 * konvaImage.value.height()
+    const w = (box.x2 - box.x1) * konvaImage.value.width()
+    const h = (box.y2 - box.y1) * konvaImage.value.height()
     const rect = new Konva.Rect({
       x, y, width: w, height: h,
       stroke: '#ff4d4f',
@@ -64,7 +60,9 @@ function renderAnnotations(imgObj) {
   konvaAnnotationLayer.value.draw()
 }
 
-const imageState = ref({ x: 0, y: 0, scale: 1 })
+// 记录图片原始宽高
+defineProps([])
+const imageState = ref({ x: 0, y: 0, width: 0, height: 0, origWidth: 0, origHeight: 0 })
 
 const renderImage = (imgObj) => {
   const { width, height } = getStageSize()
@@ -89,15 +87,17 @@ const renderImage = (imgObj) => {
   imageObj.src = imgObj.url
   imageObj.onload = () => {
     const scale = Math.min(width / imageObj.width, height / imageObj.height)
-    const offsetX = (width - imageObj.width * scale) / 2
-    const offsetY = (height - imageObj.height * scale) / 2
-    imageState.value = { x: offsetX, y: offsetY, scale: 1 }
+    const imgW = imageObj.width * scale
+    const imgH = imageObj.height * scale
+    const offsetX = (width - imgW) / 2
+    const offsetY = (height - imgH) / 2
+    imageState.value = { x: offsetX, y: offsetY, width: imgW, height: imgH, origWidth: imageObj.width, origHeight: imageObj.height }
     konvaImage.value = new Konva.Image({
       image: imageObj,
       x: offsetX,
       y: offsetY,
-      width: imageObj.width * scale,
-      height: imageObj.height * scale,
+      width: imgW,
+      height: imgH,
       draggable: false,
     })
     konvaImageLayer.value.add(konvaImage.value)
@@ -110,7 +110,8 @@ function updateImageAndAnnotations(imgObj) {
   if (!konvaImage.value) return
   konvaImage.value.x(imageState.value.x)
   konvaImage.value.y(imageState.value.y)
-  konvaImage.value.scale({ x: imageState.value.scale, y: imageState.value.scale })
+  konvaImage.value.width(imageState.value.width)
+  konvaImage.value.height(imageState.value.height)
   konvaImageLayer.value.batchDraw()
   renderAnnotations(imgObj)
 }
@@ -121,26 +122,24 @@ onMounted(() => {
   })
 })
 const isDragging = ref(false)
-let lastScale = 1
-let lastX = 0
-let lastY = 0
 let startDistance = 0
 let lastPinchCenter = null
-let lastPinchImgPos = { x: 0, y: 0 }
+let lastPinchImgPos = { x: 0, y: 0, width: 0, height: 0 }
 
 useGesture(
   {
-    // 移除onDragStart、onDrag、onDragEnd，只保留onPinch相关
     onPinchStart: ({ event }) => {
-      lastScale = imageState.value.scale
       if (konvaImage.value && event.touches && event.touches.length === 2) {
         const rect = stageContainer.value.getBoundingClientRect()
         const centerX = (event.touches[0].clientX + event.touches[1].clientX) / 2 - rect.left
         const centerY = (event.touches[0].clientY + event.touches[1].clientY) / 2 - rect.top
-        konvaImage.value._pinchCenter = { x: centerX, y: centerY }
         lastPinchCenter = { x: centerX, y: centerY }
-        lastPinchImgPos = { x: imageState.value.x, y: imageState.value.y }
-        // 记录初始双指距离
+        lastPinchImgPos = {
+          x: imageState.value.x,
+          y: imageState.value.y,
+          width: imageState.value.width,
+          height: imageState.value.height
+        }
         const dx = event.touches[0].clientX - event.touches[1].clientX
         const dy = event.touches[0].clientY - event.touches[1].clientY
         startDistance = Math.sqrt(dx * dx + dy * dy)
@@ -149,38 +148,26 @@ useGesture(
     onPinch: ({ event }) => {
       if (!konvaImage.value) return
       if (event.touches && event.touches.length === 2) {
-        // 当前双指距离
         const dx = event.touches[0].clientX - event.touches[1].clientX
         const dy = event.touches[0].clientY - event.touches[1].clientY
         const currentDistance = Math.sqrt(dx * dx + dy * dy)
-        let newScale = lastScale * (currentDistance / startDistance)
-        if (newScale < 0.5) newScale = 0.5
-        if (newScale > 10) newScale = 10
-        // 当前双指中心点
-        const rect = stageContainer.value.getBoundingClientRect()
-        const centerX = (event.touches[0].clientX + event.touches[1].clientX) / 2 - rect.left
-        const centerY = (event.touches[0].clientY + event.touches[1].clientY) / 2 - rect.top
-        if (Math.abs(currentDistance - startDistance) < 2) {
-          // 视为拖动
-          imageState.value.x = lastPinchImgPos.x + (centerX - lastPinchCenter.x)
-          imageState.value.y = lastPinchImgPos.y + (centerY - lastPinchCenter.y)
-        } else {
-          // 缩放中心点修正，始终用 onPinchStart 的 lastPinchCenter
-          const img = konvaImage.value
-          const relX = (lastPinchCenter.x - img.x()) / (img.width() * img.scaleX())
-          const relY = (lastPinchCenter.y - img.y()) / (img.height() * img.scaleY())
-          const newImgW = img.width() * newScale
-          const newImgH = img.height() * newScale
-          imageState.value.x = lastPinchCenter.x - relX * newImgW
-          imageState.value.y = lastPinchCenter.y - relY * newImgH
-        }
-        imageState.value.scale = newScale
+        let scale = currentDistance / startDistance
+        // 限制缩放比例
+        if (lastPinchImgPos.width * scale < lastPinchImgPos.width * 0.5) scale = 0.5
+        if (lastPinchImgPos.width * scale > lastPinchImgPos.width * 10) scale = 10
+        const newImgW = lastPinchImgPos.width * scale
+        const newImgH = lastPinchImgPos.height * scale
+        const relX = (lastPinchCenter.x - lastPinchImgPos.x) / lastPinchImgPos.width
+        const relY = (lastPinchCenter.y - lastPinchImgPos.y) / lastPinchImgPos.height
+        imageState.value.width = newImgW
+        imageState.value.height = newImgH
+        imageState.value.x = lastPinchCenter.x - relX * newImgW
+        imageState.value.y = lastPinchCenter.y - relY * newImgH
         updateImageAndAnnotations(imageUrls[selectedIndex.value])
       }
     },
     onPinchEnd: () => {
-      lastScale = imageState.value.scale
-      lastPinchImgPos = { x: imageState.value.x, y: imageState.value.y }
+      lastPinchImgPos = { x: imageState.value.x, y: imageState.value.y, width: imageState.value.width, height: imageState.value.height }
       lastPinchCenter = null
     }
   },
