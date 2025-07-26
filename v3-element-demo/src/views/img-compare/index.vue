@@ -33,6 +33,8 @@ const konvaImage = ref(null)
 const lowResImageObj = ref(null)
 let isUsingLowRes = false
 let pinchRaf = null
+const resultImageUrl = ref('http://192.168.0.104:8080/wallhaven-83dq9k.jpg') // 结果图占位
+const isComparing = ref(false)
 
 const getStageSize = () => {
   if (!stageContainer.value) return { width: 360, height: 360 }
@@ -113,6 +115,42 @@ const renderImage = (imgObj) => {
     createLowResImage(imageObj, (lowResImg) => {
       lowResImageObj.value = lowResImg
     })
+    // 如果正在对比，加载结果图
+    if (isComparing.value) {
+      // 切换到结果图
+      const resultImg = new window.Image()
+      resultImg.crossOrigin = 'Anonymous'
+      resultImg.src = resultImageUrl.value
+      resultImg.onload = () => {
+        konvaImage.value.image(resultImg)
+        konvaImageLayer.value.batchDraw()
+      }
+    }
+  }
+}
+
+function handleCompare() {
+  if (!isComparing.value) {
+    isComparing.value = true
+    // 切换到结果图
+    const resultImg = new window.Image()
+    resultImg.crossOrigin = 'Anonymous'
+    resultImg.src = resultImageUrl.value
+    resultImg.onload = () => {
+      konvaImage.value.image(resultImg)
+      konvaImageLayer.value.batchDraw()
+    }
+  } else {
+    isComparing.value = false
+    // 切回主图
+    const imgObj = imageUrls[selectedIndex.value]
+    const imageObj = new window.Image()
+    imageObj.crossOrigin = 'Anonymous'
+    imageObj.src = imgObj.url
+    imageObj.onload = () => {
+      konvaImage.value.image(imageObj)
+      konvaImageLayer.value.batchDraw()
+    }
   }
 }
 
@@ -244,6 +282,11 @@ const handleProcess = () => {
 
 <template>
   <div class="img-compare-mobile">
+    <div style="position: absolute; right: 4vw; top: 2vw; z-index: 10;">
+      <el-button size="small" @click="handleCompare" :type="isComparing ? 'danger' : 'primary'">
+        {{ isComparing ? '关闭对比' : '对比' }}
+      </el-button>
+    </div>
     <div class="main-img-area">
       <div class="konva-stage" ref="stageContainer"></div>
     </div>
