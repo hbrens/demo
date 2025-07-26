@@ -35,6 +35,8 @@ let isUsingLowRes = false
 let pinchRaf = null
 const resultImageUrl = ref('http://192.168.0.104:8080/wallhaven-83dq9k.jpg') // 结果图占位
 const isComparing = ref(false)
+const mainImageObj = ref(null)
+const resultImageObj = ref(null)
 
 const getStageSize = () => {
   if (!stageContainer.value) return { width: 360, height: 360 }
@@ -49,11 +51,12 @@ const getStageSize = () => {
 function renderAnnotations(imgObj) {
   konvaAnnotationLayer.value.destroyChildren()
   if (!konvaImage.value) return
+  const scale = konvaImage.value.scaleX();
   imgObj.boxes.forEach(box => {
-    const x = konvaImage.value.x() + box.x1 * konvaImage.value.width()
-    const y = konvaImage.value.y() + box.y1 * konvaImage.value.height()
-    const w = (box.x2 - box.x1) * konvaImage.value.width()
-    const h = (box.y2 - box.y1) * konvaImage.value.height()
+    const x = konvaImage.value.x() + box.x1 * konvaImage.value.width() * scale
+    const y = konvaImage.value.y() + box.y1 * konvaImage.value.height() * scale
+    const w = (box.x2 - box.x1) * konvaImage.value.width() * scale
+    const h = (box.y2 - box.y1) * konvaImage.value.height() * scale
     const rect = new Konva.Rect({
       x, y, width: w, height: h,
       stroke: '#ff4d4f',
@@ -91,21 +94,21 @@ const renderImage = (imgObj) => {
   imageObj.crossOrigin = 'Anonymous'
   imageObj.src = imgObj.url
   imageObj.onload = () => {
-    const scale = Math.min(width / imageObj.width, height / imageObj.height)
-    const imgW = imageObj.width * scale
-    const imgH = imageObj.height * scale
-    console.log('width', imageObj.width, 'height', imageObj.height)
-    const offsetX = (width - imgW) / 2
-    const offsetY = (height - imgH) / 2
-    imageState.value = { x: offsetX, y: offsetY, width: imgW, height: imgH, origWidth: imageObj.width, origHeight: imageObj.height, scale: 1 }
+    // 以原图尺寸初始化，显示时用scale适配
+    const fitScale = Math.min(width / imageObj.width, height / imageObj.height)
+    const imgW = imageObj.width
+    const imgH = imageObj.height
+    const offsetX = (width - imgW * fitScale) / 2
+    const offsetY = (height - imgH * fitScale) / 2
+    imageState.value = { x: offsetX, y: offsetY, width: imgW, height: imgH, origWidth: imageObj.width, origHeight: imageObj.height, scale: fitScale, fitScale }
     konvaImage.value = new Konva.Image({
       image: imageObj,
       x: offsetX,
       y: offsetY,
       width: imgW,
       height: imgH,
-      scaleX: 1,
-      scaleY: 1,
+      scaleX: fitScale,
+      scaleY: fitScale,
       draggable: false,
     })
     konvaImageLayer.value.add(konvaImage.value)
@@ -115,42 +118,30 @@ const renderImage = (imgObj) => {
     createLowResImage(imageObj, (lowResImg) => {
       lowResImageObj.value = lowResImg
     })
-    // 如果正在对比，加载结果图
-    if (isComparing.value) {
-      // 切换到结果图
-      const resultImg = new window.Image()
-      resultImg.crossOrigin = 'Anonymous'
-      resultImg.src = resultImageUrl.value
-      resultImg.onload = () => {
-        konvaImage.value.image(resultImg)
-        konvaImageLayer.value.batchDraw()
-      }
+    preloadImages();
+    // 切换时直接用缓存
+    if (isComparing.value && resultImageObj.value) {
+      konvaImage.value.image(resultImageObj.value)
+      konvaImageLayer.value.batchDraw()
     }
   }
 }
 
-function handleCompare() {
-  if (!isComparing.value) {
-    isComparing.value = true
-    // 切换到结果图
-    const resultImg = new window.Image()
-    resultImg.crossOrigin = 'Anonymous'
-    resultImg.src = resultImageUrl.value
-    resultImg.onload = () => {
-      konvaImage.value.image(resultImg)
-      konvaImageLayer.value.batchDraw()
-    }
-  } else {
-    isComparing.value = false
-    // 切回主图
-    const imgObj = imageUrls[selectedIndex.value]
-    const imageObj = new window.Image()
-    imageObj.crossOrigin = 'Anonymous'
-    imageObj.src = imgObj.url
-    imageObj.onload = () => {
-      konvaImage.value.image(imageObj)
-      konvaImageLayer.value.batchDraw()
-    }
+function showCompare() {
+  if (isComparing.value) return;
+  isComparing.value = true;
+  if (resultImageObj.value && konvaImage.value) {
+    konvaImage.value.image(resultImageObj.value);
+    konvaImageLayer.value.batchDraw();
+  }
+}
+
+function hideCompare() {
+  if (!isComparing.value) return;
+  isComparing.value = false;
+  if (mainImageObj.value && konvaImage.value) {
+    konvaImage.value.image(mainImageObj.value);
+    konvaImageLayer.value.batchDraw();
   }
 }
 
@@ -181,9 +172,37 @@ function createLowResImage(imageObj, callback) {
   }
 }
 
+// 预加载主图和结果图
+function preloadImages() {
+  // 主图
+  const imgObj = imageUrls[selectedIndex.value]
+  const mainImg = new window.Image()
+  mainImg.crossOrigin = 'Anonymous'
+  mainImg.src = imgObj.url
+  mainImg.onload = () => {
+    mainImageObj.value = mainImg
+    if (!isComparing.value && konvaImage.value) {
+      konvaImage.value.image(mainImg)
+      konvaImageLayer.value.batchDraw()
+    }
+  }
+  // 结果图
+  const resultImg = new window.Image()
+  resultImg.crossOrigin = 'Anonymous'
+  resultImg.src = resultImageUrl.value
+  resultImg.onload = () => {
+    resultImageObj.value = resultImg
+    if (isComparing.value && konvaImage.value) {
+      konvaImage.value.image(resultImg)
+      konvaImageLayer.value.batchDraw()
+    }
+  }
+}
+
 onMounted(() => {
   nextTick(() => {
     renderImage(imageUrls[selectedIndex.value])
+    preloadImages();
   })
 })
 const isDragging = ref(false)
@@ -227,17 +246,16 @@ useGesture(
           const dy = event.touches[0].clientY - event.touches[1].clientY
           const currentDistance = Math.sqrt(dx * dx + dy * dy)
           let scale = currentDistance / startDistance * lastPinchImgPos.scale
-          // 限制缩放比例
-          if (scale < 0.5) scale = 0.5
-          if (scale > 10) scale = 10
+          // 限制缩放比例（基于fitScale）
+          const fitScale = imageState.value.fitScale || 1
+          if (scale < fitScale * 0.5) scale = fitScale * 0.5
+          if (scale > fitScale * 10) scale = fitScale * 10
           // 计算缩放中心点对应的偏移
           const relX = (lastPinchCenter.x - lastPinchImgPos.x) / (lastPinchImgPos.width * lastPinchImgPos.scale)
           const relY = (lastPinchCenter.y - lastPinchImgPos.y) / (lastPinchImgPos.height * lastPinchImgPos.scale)
-          const newImgW = lastPinchImgPos.width * scale
-          const newImgH = lastPinchImgPos.height * scale
           imageState.value.scale = scale
-          imageState.value.x = lastPinchCenter.x - relX * newImgW
-          imageState.value.y = lastPinchCenter.y - relY * newImgH
+          imageState.value.x = lastPinchCenter.x - relX * lastPinchImgPos.width * scale
+          imageState.value.y = lastPinchCenter.y - relY * lastPinchImgPos.height * scale
           updateImageAndAnnotations(imageUrls[selectedIndex.value])
         })
       }
@@ -269,6 +287,7 @@ useGesture(
 
 watch(selectedIndex, (idx) => {
   renderImage(imageUrls[idx])
+  preloadImages();
 })
 
 const handleSelect = (idx) => {
@@ -283,8 +302,11 @@ const handleProcess = () => {
 <template>
   <div class="img-compare-mobile">
     <div style="position: absolute; right: 4vw; top: 2vw; z-index: 10;">
-      <el-button size="small" @click="handleCompare" :type="isComparing ? 'danger' : 'primary'">
-        {{ isComparing ? '关闭对比' : '对比' }}
+      <el-button size="small"
+        @mousedown="showCompare" @mouseup="hideCompare" @mouseleave="hideCompare"
+        @touchstart.prevent="showCompare" @touchend.prevent="hideCompare" @touchcancel.prevent="hideCompare"
+        :type="isComparing ? 'danger' : 'primary'">
+        对比
       </el-button>
     </div>
     <div class="main-img-area">
