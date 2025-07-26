@@ -6,7 +6,7 @@ import { useGesture } from '@vueuse/gesture'
 // 主图和三张可选图都用同一张图片
 const imageUrls = [
   {
-    url: 'http://192.168.0.104:8080/0f04af422502a40b6c8dc19d53d1f348.jpg',
+    url: 'http://192.168.0.104:8080/1.jpg',
     boxes: [
       // 示例：左上(0.1,0.1) 右下(0.4,0.3)
       { x1: 0.1, y1: 0.1, x2: 0.4, y2: 0.3 },
@@ -14,13 +14,13 @@ const imageUrls = [
     ]
   },
   {
-    url: 'http://192.168.0.104:8080/0f04af422502a40b6c8dc19d53d1f348.jpg',
+    url: 'http://192.168.0.104:8080/1.jpg',
     boxes: [
       { x1: 0.2, y1: 0.2, x2: 0.5, y2: 0.4 },
     ]
   },
   {
-    url: 'http://192.168.0.104:8080/0f04af422502a40b6c8dc19d53d1f348.jpg',
+    url: 'http://192.168.0.104:8080/1.jpg',
     boxes: []
   },
 ]
@@ -30,6 +30,9 @@ const konvaStage = ref(null)
 const konvaImageLayer = ref(null)
 const konvaAnnotationLayer = ref(null)
 const konvaImage = ref(null)
+const lowResImageObj = ref(null)
+let isUsingLowRes = false
+let pinchRaf = null
 
 const getStageSize = () => {
   if (!stageContainer.value) return { width: 360, height: 360 }
@@ -89,6 +92,7 @@ const renderImage = (imgObj) => {
     const scale = Math.min(width / imageObj.width, height / imageObj.height)
     const imgW = imageObj.width * scale
     const imgH = imageObj.height * scale
+    console.log('width', imageObj.width, 'height', imageObj.height)
     const offsetX = (width - imgW) / 2
     const offsetY = (height - imgH) / 2
     imageState.value = { x: offsetX, y: offsetY, width: imgW, height: imgH, origWidth: imageObj.width, origHeight: imageObj.height }
@@ -103,17 +107,39 @@ const renderImage = (imgObj) => {
     konvaImageLayer.value.add(konvaImage.value)
     konvaImageLayer.value.draw()
     renderAnnotations(imgObj)
+    // 生成低分辨率图片
+    createLowResImage(imageObj, (lowResImg) => {
+      lowResImageObj.value = lowResImg
+    })
   }
 }
 
+const resizeCount = ref(0)
 function updateImageAndAnnotations(imgObj) {
   if (!konvaImage.value) return
+
+  console.log('resize count', resizeCount.value++)
   konvaImage.value.x(imageState.value.x)
   konvaImage.value.y(imageState.value.y)
   konvaImage.value.width(imageState.value.width)
   konvaImage.value.height(imageState.value.height)
   konvaImageLayer.value.batchDraw()
   renderAnnotations(imgObj)
+}
+
+function createLowResImage(imageObj, callback) {
+  const canvas = document.createElement('canvas')
+  const maxW = 4096 // 低分辨率宽度
+  const scale = maxW / imageObj.width
+  canvas.width = maxW
+  canvas.height = imageObj.height * scale
+  const ctx = canvas.getContext('2d')
+  ctx.drawImage(imageObj, 0, 0, canvas.width, canvas.height)
+  const lowResImg = new window.Image()
+  lowResImg.src = canvas.toDataURL()
+  lowResImg.onload = () => {
+    callback(lowResImg)
+  }
 }
 
 onMounted(() => {
@@ -143,32 +169,53 @@ useGesture(
         const dx = event.touches[0].clientX - event.touches[1].clientX
         const dy = event.touches[0].clientY - event.touches[1].clientY
         startDistance = Math.sqrt(dx * dx + dy * dy)
+        // 切换到低分辨率图片
+        if (lowResImageObj.value && konvaImage.value && !isUsingLowRes) {
+          konvaImage.value.image(lowResImageObj.value)
+          konvaImageLayer.value.batchDraw()
+          isUsingLowRes = true
+        }
       }
     },
     onPinch: ({ event }) => {
       if (!konvaImage.value) return
       if (event.touches && event.touches.length === 2) {
-        const dx = event.touches[0].clientX - event.touches[1].clientX
-        const dy = event.touches[0].clientY - event.touches[1].clientY
-        const currentDistance = Math.sqrt(dx * dx + dy * dy)
-        let scale = currentDistance / startDistance
-        // 限制缩放比例
-        if (lastPinchImgPos.width * scale < lastPinchImgPos.width * 0.5) scale = 0.5
-        if (lastPinchImgPos.width * scale > lastPinchImgPos.width * 10) scale = 10
-        const newImgW = lastPinchImgPos.width * scale
-        const newImgH = lastPinchImgPos.height * scale
-        const relX = (lastPinchCenter.x - lastPinchImgPos.x) / lastPinchImgPos.width
-        const relY = (lastPinchCenter.y - lastPinchImgPos.y) / lastPinchImgPos.height
-        imageState.value.width = newImgW
-        imageState.value.height = newImgH
-        imageState.value.x = lastPinchCenter.x - relX * newImgW
-        imageState.value.y = lastPinchCenter.y - relY * newImgH
-        updateImageAndAnnotations(imageUrls[selectedIndex.value])
+        if (pinchRaf) return
+        pinchRaf = requestAnimationFrame(() => {
+          pinchRaf = null
+          const dx = event.touches[0].clientX - event.touches[1].clientX
+          const dy = event.touches[0].clientY - event.touches[1].clientY
+          const currentDistance = Math.sqrt(dx * dx + dy * dy)
+          let scale = currentDistance / startDistance
+          if (lastPinchImgPos.width * scale < lastPinchImgPos.width * 0.5) scale = 0.5
+          if (lastPinchImgPos.width * scale > lastPinchImgPos.width * 10) scale = 10
+          const newImgW = lastPinchImgPos.width * scale
+          const newImgH = lastPinchImgPos.height * scale
+          const relX = (lastPinchCenter.x - lastPinchImgPos.x) / lastPinchImgPos.width
+          const relY = (lastPinchCenter.y - lastPinchImgPos.y) / lastPinchImgPos.height
+          imageState.value.width = newImgW
+          imageState.value.height = newImgH
+          imageState.value.x = lastPinchCenter.x - relX * newImgW
+          imageState.value.y = lastPinchCenter.y - relY * newImgH
+          updateImageAndAnnotations(imageUrls[selectedIndex.value])
+        })
       }
     },
     onPinchEnd: () => {
       lastPinchImgPos = { x: imageState.value.x, y: imageState.value.y, width: imageState.value.width, height: imageState.value.height }
       lastPinchCenter = null
+      // 切回高分辨率图片
+      if (konvaImage.value && isUsingLowRes) {
+        const imgObj = imageUrls[selectedIndex.value]
+        const imageObj = new window.Image()
+        imageObj.crossOrigin = 'Anonymous'
+        imageObj.src = imgObj.url
+        imageObj.onload = () => {
+          konvaImage.value.image(imageObj)
+          konvaImageLayer.value.batchDraw()
+          isUsingLowRes = false
+        }
+      }
     }
   },
   {
