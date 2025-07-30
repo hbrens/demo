@@ -104,7 +104,7 @@
 import { ref, nextTick, computed } from 'vue';
 import { Close, Search } from '@element-plus/icons-vue';
 
-const dialogVisible = ref(true);
+const dialogVisible = ref(false);
 const searchKeyword = ref('');
 const userTableRef = ref();
 

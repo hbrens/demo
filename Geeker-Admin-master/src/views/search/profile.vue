@@ -5,6 +5,7 @@
     <el-button type="success" :icon="Document" @click="openStepDialog" style="margin-left: 10px;">步骤表单</el-button>
     <UserAddDialog ref="userDialogRef" />
     <StepFormDialog ref="stepDialogRef" />
+    <GroupUserAddDialog ref="groupUserAddDialogRef" />
   </div>
 </template>
 
@@ -13,9 +14,12 @@ import { ref } from "vue";
 import { Plus, Document } from "@element-plus/icons-vue";
 import UserAddDialog from "@/views/search/componets/UserAddDialog.vue";
 import StepFormDialog from "@/views/search/componets/StepFormDialog.vue";
+import GroupUserAddDialog from "./componets/GroupUserAddDialog.vue";
 
 const userDialogRef = ref<InstanceType<typeof UserAddDialog> | null>(null);
 const stepDialogRef = ref<InstanceType<typeof StepFormDialog> | null>(null);
+const groupUserAddDialogRef = ref<InstanceType<typeof GroupUserAddDialog> | null>(null);
+
 
 const openUserDialog = () => {
   userDialogRef.value?.acceptParams({

@@ -47,6 +47,51 @@
         ></el-input>
       </el-form-item>
       
+      <!-- 键值对列表 -->
+      <el-form-item label="键值对列表" prop="keyValuePairs">
+        <div class="key-value-container">
+          <div 
+            v-for="(pair, index) in (dialogProps.row!.keyValuePairs || [])" 
+            :key="pair.id || index" 
+            class="key-value-item"
+          >
+            <div class="key-value-content">
+              <el-input 
+                v-model="pair.key" 
+                placeholder="请输入键名" 
+                clearable
+                class="key-input"
+              />
+              <span class="equals-sign">=</span>
+              <el-input 
+                v-model="pair.value" 
+                placeholder="请输入值" 
+                clearable
+                class="value-input"
+              />
+              <el-button 
+                type="danger" 
+                :icon="Delete" 
+                @click="removeKeyValuePair(index)"
+                class="delete-btn"
+                v-if="!dialogProps.isView"
+                circle
+              />
+            </div>
+          </div>
+          
+          <div class="key-value-footer" v-if="!dialogProps.isView">
+            <el-button 
+              type="primary" 
+              :icon="Plus" 
+              @click="addKeyValuePair"
+            >
+              添加键值对
+            </el-button>
+          </div>
+        </div>
+      </el-form-item>
+      
       <!-- 学生信息 -->
       <el-form-item label="学生信息">
         <div class="students-container">
@@ -170,7 +215,10 @@ const rules = reactive({
   'students.*.age': [{ required: true, message: "请输入学生年龄" }],
   'students.*.school': [{ required: true, message: "请填写学校名称" }],
   'students.*.grade': [{ required: true, message: "请选择年级" }],
-  'students.*.remark': [{ required: false, message: "请填写备注信息" }]
+  'students.*.remark': [{ required: false, message: "请填写备注信息" }],
+  // 键值对列表验证规则
+  'keyValuePairs.*.key': [{ required: true, message: "请填写键名" }],
+  'keyValuePairs.*.value': [{ required: true, message: "请填写值" }]
 });
 
 interface DialogProps {
@@ -185,6 +233,11 @@ interface DialogProps {
     idCard?: string;
     address?: string;
     description?: string;
+    keyValuePairs?: Array<{
+      id?: number;
+      key?: string;
+      value?: string;
+    }>;
     students?: Array<{
       id?: number;
       name?: string;
@@ -203,7 +256,8 @@ const dialogProps = ref<DialogProps>({
   isView: false,
   title: "",
   row: {
-    students: []
+    students: [],
+    keyValuePairs: []
   }
 });
 
@@ -213,6 +267,10 @@ const acceptParams = (params: DialogProps) => {
   // 确保students数组存在
   if (!dialogProps.value.row.students) {
     dialogProps.value.row.students = [];
+  }
+  // 确保keyValuePairs数组存在
+  if (!dialogProps.value.row.keyValuePairs) {
+    dialogProps.value.row.keyValuePairs = [];
   }
   dialogVisible.value = true;
 };
@@ -236,6 +294,25 @@ const addStudent = () => {
 const removeStudent = (index: number) => {
   if (dialogProps.value.row.students) {
     dialogProps.value.row.students.splice(index, 1);
+  }
+};
+
+// 添加键值对
+const addKeyValuePair = () => {
+  if (!dialogProps.value.row.keyValuePairs) {
+    dialogProps.value.row.keyValuePairs = [];
+  }
+  dialogProps.value.row.keyValuePairs.push({
+    id: Date.now(),
+    key: "",
+    value: ""
+  });
+};
+
+// 删除键值对
+const removeKeyValuePair = (index: number) => {
+  if (dialogProps.value.row.keyValuePairs) {
+    dialogProps.value.row.keyValuePairs.splice(index, 1);
   }
 };
 
@@ -265,6 +342,44 @@ defineExpose({
 .el-dialog {
   .el-form {
     padding: 20px;
+  }
+}
+
+.key-value-container {
+  background: var(--el-bg-color);
+  
+  .key-value-item {
+    padding: 0;
+    margin-bottom: 8px;
+    
+    .key-value-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      
+      .key-input, .value-input {
+        flex: 1;
+        min-width: 0;
+      }
+      
+      .equals-sign {
+        font-size: 18px;
+        font-weight: bold;
+        color: var(--el-text-color-secondary);
+        margin: 0 8px;
+        flex-shrink: 0;
+      }
+      
+      .delete-btn {
+        flex-shrink: 0;
+        margin-left: 8px;
+      }
+    }
+  }
+  
+  .key-value-footer {
+    padding: 8px 0;
+    text-align: left;
   }
 }
 
