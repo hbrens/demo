@@ -11,6 +11,7 @@ import CustomHobbyTagEditor from './CustomHobbyTagEditor.vue'
 import ColumnConfig from './ColumnConfig.vue'
 import CountrySelectEditor from './CountrySelectEditor.vue'
 import CountryAutocompleteEditor from './CountryAutocompleteEditor.vue'
+import MultiCustomFilter from './MultiCustomFilter.js'
 
 import {
   ClientSideRowModelApiModule,
@@ -36,6 +37,7 @@ import {
   PinnedRowModule,
   RowSelectionModule,
   GridApi,
+  CustomFilterModule 
 } from "ag-grid-community";
 
 
@@ -57,6 +59,7 @@ ModuleRegistry.registerModules([
   EventApiModule,
   PinnedRowModule,
   RowSelectionModule,
+  CustomFilterModule 
 ]);
 
 import { AG_GRID_LOCALE_CN } from '@ag-grid-community/locale';
@@ -140,13 +143,19 @@ const columnDefs = ref([
   { field: "age", type: 'editableColumn' },
   { 
     field: "country",
+    headerName: '国家',
     type: 'editableColumn',
     cellEditor: CountryAutocompleteEditor,
     cellEditorParams: {
       values: ['English', 'Spanish', 'French', 'Portuguese', '(other)'],
     },
+    filter: MultiCustomFilter
   },
-  { field: "year", type: 'editableColumn' },
+  { 
+    field: "year", 
+    type: 'editableColumn',
+    filter: MultiCustomFilter
+  },
   // { field: "date", type: 'editableColumn' },
   // { field: "gold", type: 'editableColumn' },
   // { field: "silver", type: 'editableColumn' },
@@ -304,7 +313,7 @@ const onGridReady = (params) => {
       // 更新 country 列的 cellEditorParams
       const countryCol = columnDefs.value.find(col => (col as any).field === 'country');
       if (countryCol) {
-        countryCol.cellEditorParams = {
+        (countryCol as any).cellEditorParams = {
           values: uniqueCountries
         };
       }
@@ -315,6 +324,19 @@ const onGridReady = (params) => {
       // 使用辅助函数应用列状态 - 尝试3次，每次100ms
       if (savedColumnState) {
         applyColumnStateHelper(savedColumnState, 100, 3);
+      }
+      
+      // 刷新筛选器以获取最新的值
+      if (gridApi.value) {
+        setTimeout(() => {
+          gridApi.value.refreshHeader();
+          // 重新初始化筛选器
+          const countryCol = gridApi.value.getColumnDef('country');
+          const yearCol = gridApi.value.getColumnDef('year');
+          if (countryCol) {
+            gridApi.value.setFilterModel(null);
+          }
+        }, 200);
       }
       
       // 移除加载状态
@@ -363,7 +385,7 @@ const updateData = (data) => {
   // 更新 country 列的 cellEditorParams
   const countryCol = columnDefs.value.find(col => (col as any).field === 'country');
   if (countryCol) {
-    countryCol.cellEditorParams = {
+    (countryCol as any).cellEditorParams = {
       values: uniqueCountries
     };
   }
@@ -398,6 +420,70 @@ const filterBySelectedAges = () => {
 function restoreFromHardCoded() {
   filterBySelectedAges();
 }
+
+// 测试获取筛选器实例
+const testGetFilterInstance = async () => {
+  if (!gridApi.value) {
+    console.warn('gridApi未初始化');
+    return;
+  }
+  
+  try {
+    // 获取国家列的筛选器实例 - 返回Promise
+    const filterInstance = await gridApi.value.getColumnFilterInstance('country');
+    
+    // 详细检查筛选器实例
+    console.log('=== 筛选器实例详细检查 ===');
+    console.log('filterInstance对象:', filterInstance);
+    console.log('filterInstance类型:', typeof filterInstance);
+    console.log('filterInstance构造函数:', filterInstance?.constructor?.name);
+    
+    // 检查所有属性
+    console.log('所有属性名:', Object.getOwnPropertyNames(filterInstance || {}));
+    console.log('所有可枚举属性:', Object.keys(filterInstance || {}));
+    
+    // 检查特定方法
+    console.log('doesFilterPass存在:', 'doesFilterPass' in filterInstance);
+    console.log('doesFilterPass类型:', typeof filterInstance?.doesFilterPass);
+    console.log('doesFilterPass值:', filterInstance?.doesFilterPass);
+    
+    console.log('isFilterActive存在:', 'isFilterActive' in filterInstance);
+    console.log('isFilterActive类型:', typeof filterInstance?.isFilterActive);
+    
+    console.log('getModel存在:', 'getModel' in filterInstance);
+    console.log('getModel类型:', typeof filterInstance?.getModel);
+    
+    // 检查原型链
+    console.log('原型链:', Object.getPrototypeOf(filterInstance));
+    
+    return
+    console.log('国家列筛选器实例:', filterInstance);
+    console.log('筛选器实例的所有属性:', Object.keys(filterInstance || {}));
+    
+    // 检查列定义
+    const columnDef = gridApi.value.getColumnDef('country');
+    console.log('国家列定义:', columnDef);
+    
+    if (filterInstance) {
+      // 尝试调用各种方法
+      console.log('尝试调用isFilterActive:', typeof filterInstance.isFilterActive);
+      if (typeof filterInstance.isFilterActive === 'function') {
+        console.log('isFilterActive结果:', filterInstance.isFilterActive());
+      }
+      
+      console.log('尝试调用getModel:', typeof filterInstance.getModel);
+      if (typeof filterInstance.getModel === 'function') {
+        console.log('getModel结果:', filterInstance.getModel());
+      }
+      
+      console.log('尝试调用doesFilterPass:', typeof filterInstance.doesFilterPass);
+    } else {
+      console.log('未找到国家列的筛选器实例');
+    }
+  } catch (error) {
+    console.error('获取筛选器实例失败:', error);
+  }
+};
 
 // 添加常量用于存储列配置的key
 const COLUMN_CONFIG_STORAGE_KEY = 'ag-grid-column-config';
@@ -827,6 +913,7 @@ const updatePinnedRowYear = () => {
         </el-button>
 
         <el-button @click="restoreFromHardCoded">设置过滤</el-button>
+        <el-button @click="testGetFilterInstance">测试获取filterinstance</el-button>
 
         <!-- 添加列配置按钮，修改点击事件为openColumnConfigDrawer -->
         <el-button 
