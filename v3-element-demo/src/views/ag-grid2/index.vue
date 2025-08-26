@@ -12,6 +12,7 @@ import ColumnConfig from './ColumnConfig.vue'
 import CountrySelectEditor from './CountrySelectEditor.vue'
 import CountryAutocompleteEditor from './CountryAutocompleteEditor.vue'
 import MultiCustomFilter from './MultiCustomFilter.js'
+import VueMultiCustomFilterWrapper from './VueMultiCustomFilterWrapper.js'
 
 import {
   ClientSideRowModelApiModule,
@@ -154,7 +155,7 @@ const columnDefs = ref([
   { 
     field: "year", 
     type: 'editableColumn',
-    filter: MultiCustomFilter
+    filter: VueMultiCustomFilterWrapper
   },
   // { field: "date", type: 'editableColumn' },
   // { field: "gold", type: 'editableColumn' },
@@ -456,9 +457,9 @@ const testGetFilterInstance = async () => {
     // 检查原型链
     console.log('原型链:', Object.getPrototypeOf(filterInstance));
     
-    return
-    console.log('国家列筛选器实例:', filterInstance);
-    console.log('筛选器实例的所有属性:', Object.keys(filterInstance || {}));
+      return
+  console.log('国家列筛选器实例:', filterInstance);
+  console.log('筛选器实例的所有属性:', Object.keys(filterInstance || {}));
     
     // 检查列定义
     const columnDef = gridApi.value.getColumnDef('country');
@@ -482,6 +483,56 @@ const testGetFilterInstance = async () => {
     }
   } catch (error) {
     console.error('获取筛选器实例失败:', error);
+  }
+};
+
+// 测试Vue筛选器实例
+const testVueFilterInstance = async () => {
+  console.log('testVueFilterInstance')
+  if (!gridApi.value) {
+    console.warn('gridApi未初始化');
+    return;
+  }
+  
+  try {
+    // 获取Vue筛选器实例 - 返回Promise
+    const vueFilterInstance = await gridApi.value.getColumnFilterInstance('year');
+    
+    // 详细检查Vue筛选器实例
+    console.log('=== Vue筛选器实例详细检查 ===');
+    console.log('vueFilterInstance对象:', vueFilterInstance);
+    console.log('vueFilterInstance类型:', typeof vueFilterInstance);
+    console.log('vueFilterInstance构造函数:', vueFilterInstance?.constructor?.name);
+    
+    // 检查所有属性
+    console.log('所有属性名:', Object.getOwnPropertyNames(vueFilterInstance || {}));
+    console.log('所有可枚举属性:', Object.keys(vueFilterInstance || {}));
+    
+    // 检查特定方法
+    console.log('doesFilterPass存在:', 'doesFilterPass' in vueFilterInstance);
+    console.log('doesFilterPass类型:', typeof vueFilterInstance?.doesFilterPass);
+    console.log('doesFilterPass值:', vueFilterInstance?.doesFilterPass);
+    
+    console.log('isFilterActive存在:', 'isFilterActive' in vueFilterInstance);
+    console.log('isFilterActive类型:', typeof vueFilterInstance?.isFilterActive);
+    
+    console.log('getModel存在:', 'getModel' in vueFilterInstance);
+    console.log('getModel类型:', typeof vueFilterInstance?.getModel);
+    
+    // 检查原型链
+    console.log('原型链:', Object.getPrototypeOf(vueFilterInstance));
+    
+    // 测试方法调用
+    try {
+      if (typeof vueFilterInstance.isFilterActive === 'function') {
+        console.log('Vue isFilterActive调用结果:', vueFilterInstance.isFilterActive());
+      }
+    } catch (error) {
+      console.error('调用Vue isFilterActive失败:', error);
+    }
+    
+  } catch (error) {
+    console.error('获取Vue筛选器实例失败:', error);
   }
 };
 
@@ -877,7 +928,9 @@ const unpinAllTopRows = () => {
 };
 
 // 新增：修改指定置顶行 year 字段的函数
-defineExpose();
+defineExpose({
+  testVueFilterInstance
+});
 const updatePinnedRowYear = () => {
   // 获取pinnedTopRows中的数据
   // 由于pinnedTopRows.value只是数据数组，没有node信息，需要通过gridApi获取rowNode
@@ -912,8 +965,9 @@ const updatePinnedRowYear = () => {
           {{ isEditable ? '禁用编辑' : '启用编辑' }}
         </el-button>
 
-        <el-button @click="restoreFromHardCoded">设置过滤</el-button>
-        <el-button @click="testGetFilterInstance">测试获取filterinstance</el-button>
+                  <el-button @click="restoreFromHardCoded">设置过滤</el-button>
+          <el-button @click="testGetFilterInstance">测试获取filterinstance</el-button>
+          <el-button @click="testVueFilterInstance">测试Vue筛选器实例</el-button>
 
         <!-- 添加列配置按钮，修改点击事件为openColumnConfigDrawer -->
         <el-button 
