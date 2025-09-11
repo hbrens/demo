@@ -3,7 +3,12 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 const routes = [
   {
     path: '/',
-    redirect: '/img',
+    redirect: '/tree-menu',
+  },
+  {
+    path: '/tree-menu',
+    name: 'tree-menu',
+    component: () => import('@/views/tree-menu/index.vue')
   },
   {
     path: '/editor',
