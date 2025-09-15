@@ -3,7 +3,11 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 const routes = [
   {
     path: '/',
-    redirect: '/tree-menu',
+    redirect: '/yaml-config',
+  },
+  {
+    path: '/yaml-config',
+    component: () => import('@/views/yaml-config/index.vue')
   },
   {
     path: '/tree-menu',
