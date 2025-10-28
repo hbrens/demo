@@ -188,6 +188,34 @@
           }
         },
         {
+          "path": "/proTable/relationTable",
+          "name": "relationTable",
+          "component": "/proTable/relationTable/index",
+          "meta": {
+            "icon": "Menu",
+            "title": "关联ProTable",
+            "isLink": "",
+            "isHide": false,
+            "isFull": false,
+            "isAffix": false,
+            "isKeepAlive": true
+          }
+        },
+        {
+          "path": "/proTable/relationTable2",
+          "name": "relationTable2",
+          "component": "/proTable/relationTable/index2",
+          "meta": {
+            "icon": "Menu",
+            "title": "关联ProTable2",
+            "isLink": "",
+            "isHide": false,
+            "isFull": false,
+            "isAffix": false,
+            "isKeepAlive": true
+          }
+        },
+        {
           "path": "/proTable/document",
           "name": "proTableDocument",
           "component": "/proTable/document/index",
