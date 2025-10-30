@@ -232,6 +232,35 @@
       ]
     },
     {
+      "path": "demo",
+      "name": "demo",
+      "redirect": "/demo/searchInputDemo",
+      "meta": {
+        "icon": "Lock",
+        "title": "demo",
+        "isLink": "",
+        "isHide": false,
+        "isFull": false,
+        "isAffix": false,
+        "isKeepAlive": true
+      },
+      "children": [
+        {
+          "path": "/demo/searchInputDemo",
+          "name": "Demo",
+          "component": "/demo/searchInputDemo/index",
+          "meta": {
+            "icon": "Menu",
+            "title": "searchInputDemo",
+            "isHide": false,
+            "isFull": false,
+            "isAffix": false,
+            "isKeepAlive": true
+          }
+        }
+      ]
+    },
+    {
       "path": "/auth",
       "name": "auth",
       "redirect": "/auth/menu",
