@@ -40,7 +40,8 @@
         "isHide": false,
         "isFull": false,
         "isAffix": false,
-        "isKeepAlive": true
+        "isKeepAlive": true,
+        "hideSubMenu": true
       }
     },
     {
@@ -48,13 +49,15 @@
       "name": "profile",
       "component": "/search/profile",
       "meta": {
+        "activeMenu": "profile",
         "icon": "Histogram",
         "title": "个人主页",
         "isLink": "",
         "isHide": false,
         "isFull": false,
         "isAffix": false,
-        "isKeepAlive": true
+        "isKeepAlive": true,
+        "hideSubMenu": true
       }
     },
     {
@@ -72,7 +75,7 @@
       },
       "children": [
         {
-          "path": "/proTable/useProTable",
+          "path": "/proTable1/useProTable",
           "name": "useProTable",
           "component": "/proTable/useProTable/index",
           "meta": {

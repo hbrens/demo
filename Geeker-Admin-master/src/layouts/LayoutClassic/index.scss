@@ -15,6 +15,7 @@
       align-items: center;
       overflow: hidden;
       white-space: nowrap;
+      flex: 1;
       .logo {
         flex-shrink: 0;
         width: 210px;
@@ -29,6 +30,45 @@
           font-weight: bold;
           color: var(--el-header-logo-text-color);
           white-space: nowrap;
+        }
+      }
+      .top-menu {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-left: 20px;
+        height: 100%;
+        
+        .top-menu-item {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          height: 40px;
+          padding: 0 20px;
+          color: var(--el-text-color-regular);
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: color 0.3s ease;
+          
+          .menu-icon {
+            font-size: 16px;
+          }
+          
+          &:hover {
+            color: var(--el-color-primary);
+          }
+          
+          &.is-active {
+            color: var(--el-color-primary);
+            font-weight: 600;
+            
+            .menu-icon {
+              color: var(--el-color-primary);
+            }
+          }
         }
       }
     }
