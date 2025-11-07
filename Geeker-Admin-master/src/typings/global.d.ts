@@ -18,6 +18,7 @@ declare namespace Menu {
     isAffix: boolean;
     isKeepAlive: boolean;
     hideSubMenu?: boolean;
+    hideBreadcrumb?: boolean;
   }
 }
 

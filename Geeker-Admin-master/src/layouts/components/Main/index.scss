@@ -8,3 +8,16 @@
   height: auto;
   padding: 0;
 }
+
+// 面包屑容器样式（用于经典布局，与 Tabs 保持一致）
+.breadcrumb-box {
+  background-color: var(--el-bg-color);
+  box-sizing: border-box;
+  padding: 0 10px;
+  height: 40px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  border-top: 1px solid var(--el-border-color-light);
+  border-bottom: 1px solid var(--el-border-color-light);
+}

@@ -57,7 +57,8 @@
         "isFull": false,
         "isAffix": false,
         "isKeepAlive": true,
-        "hideSubMenu": true
+        "hideSubMenu": true,
+        "hideBreadcrumb": true
       }
     },
     {
