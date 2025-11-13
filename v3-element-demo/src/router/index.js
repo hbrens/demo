@@ -47,6 +47,16 @@ const routes = [
     path: '/img',
     name: '/img',
     component: () => import('@/views/img-compare/index.vue')
+  },
+  {
+    path: '/img-zoom',
+    name: 'img-zoom',
+    component: () => import('@/views/img-zoom/index.vue')
+  },
+  {
+    path: '/img-zoom2',
+    name: 'img-zoom2',
+    component: () => import('@/views/img-zoom/index2.vue')
   }
 
 ]
