@@ -251,11 +251,24 @@
       "children": [
         {
           "path": "/demo/searchInputDemo",
-          "name": "Demo",
+          "name": "searchInputDemo",
           "component": "/demo/searchInputDemo/index",
           "meta": {
             "icon": "Menu",
             "title": "searchInputDemo",
+            "isHide": false,
+            "isFull": false,
+            "isAffix": false,
+            "isKeepAlive": true
+          }
+        },
+        {
+          "path": "/demo/permissionDemo",
+          "name": "permissionDemo",
+          "component": "/demo/permissionDemo/index",
+          "meta": {
+            "icon": "Menu",
+            "title": "permissionDemo",
             "isHide": false,
             "isFull": false,
             "isAffix": false,
