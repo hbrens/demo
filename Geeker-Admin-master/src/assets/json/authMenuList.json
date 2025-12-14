@@ -274,6 +274,19 @@
             "isAffix": false,
             "isKeepAlive": true
           }
+        },
+        {
+          "path": "/demo/imageGalleryDemo",
+          "name": "imageGalleryDemo",
+          "component": "/demo/imageGalleryDemo/index",
+          "meta": {
+            "icon": "Menu",
+            "title": "imageGalleryDemo",
+            "isHide": false,
+            "isFull": false,
+            "isAffix": false,
+            "isKeepAlive": true
+          }
         }
       ]
     },
