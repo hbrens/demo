@@ -504,6 +504,20 @@
             "isAffix": false,
             "isKeepAlive": true
           }
+        },
+        {
+          "path": "/assembly/tif",
+          "name": "tif",
+          "component": "/assembly/tif/index",
+          "meta": {
+            "icon": "Menu",
+            "title": "TIF 组件",
+            "isLink": "",
+            "isHide": false,
+            "isFull": false,
+            "isAffix": false,
+            "isKeepAlive": true
+          }
         }
       ]
     },
