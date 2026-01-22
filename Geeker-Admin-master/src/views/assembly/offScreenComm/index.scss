@@ -1,0 +1,40 @@
+.offscreen-comm-container {
+  display: flex;
+  width: 100%;
+  height: calc(100vh - 120px);
+  background: #f5f7fa;
+  gap: 20px;
+  padding: 20px;
+  box-sizing: border-box;
+
+  // 左侧面板容器
+  .left-panel-wrapper {
+    flex: 1;
+    min-width: 300px;
+    background: #fff;
+    border-radius: 4px;
+    padding: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  // 右侧面板容器（同屏时显示）
+  .right-panel-wrapper {
+    flex: 1;
+    min-width: 300px;
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  // 离屏状态：左侧占满全部
+  &.is-offscreen {
+    .left-panel-wrapper {
+      flex: 1;
+      max-width: 100%;
+    }
+
+    .right-panel-wrapper {
+      display: none;
+    }
+  }
+}

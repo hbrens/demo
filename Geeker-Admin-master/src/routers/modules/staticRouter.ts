@@ -24,6 +24,15 @@ export const staticRouter: RouteRecordRaw[] = [
     // component: () => import("@/layouts/indexAsync.vue"),
     redirect: HOME_URL,
     children: []
+  },
+  // 离屏窗口独立路由（不经过 layouts，直接渲染表单）
+  {
+    path: "/offscreen-form",
+    name: "offscreenForm",
+    component: () => import("@/views/assembly/offScreenComm/OffScreenWindow.vue"),
+    meta: {
+      title: "离屏表单"
+    }
   }
 ];
 

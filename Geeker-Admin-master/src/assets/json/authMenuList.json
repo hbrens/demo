@@ -518,6 +518,34 @@
             "isAffix": false,
             "isKeepAlive": true
           }
+        },
+        {
+          "path": "/assembly/offScreenComm",
+          "name": "offScreenComm",
+          "component": "/assembly/offScreenComm/index",
+          "meta": {
+            "icon": "Menu",
+            "title": "离屏控制通讯",
+            "isLink": "",
+            "isHide": false,
+            "isFull": false,
+            "isAffix": false,
+            "isKeepAlive": true
+          }
+        },
+        {
+          "path": "/assembly/offScreenComm/offscreen",
+          "name": "offScreenCommOffscreen",
+          "component": "/assembly/offScreenComm/OffScreenWindow",
+          "meta": {
+            "icon": "",
+            "title": "离屏窗口",
+            "isLink": "",
+            "isHide": true,
+            "isFull": true,
+            "isAffix": false,
+            "isKeepAlive": true
+          }
         }
       ]
     },
