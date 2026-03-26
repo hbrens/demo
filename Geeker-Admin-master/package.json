@@ -36,6 +36,8 @@
   "dependencies": {
     "@antv/g6": "^5.0.50",
     "@element-plus/icons-vue": "^2.3.1",
+    "@opentiny/next-remoter": "^0.2.10",
+    "@opentiny/next-sdk": "^0.2.10",
     "@vueuse/core": "^10.11.0",
     "@wangeditor/editor": "^5.1.23",
     "@wangeditor/editor-for-vue": "^5.1.12",
