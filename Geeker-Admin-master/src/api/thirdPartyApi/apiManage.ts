@@ -123,6 +123,8 @@ export const reviewRequest = (requestId: number, params: ReviewParams) => {
 
 /** 获取当前用户已通过的申请（密钥管理） */
 export const getApprovedRequests = async () => {
-  const data = await thirdPartyApi.get<ApprovedRequest[]>("/api-requests/approved");
+  const data = (await thirdPartyApi.get(
+    "/api-requests/approved"
+  )) as ApprovedRequest[];
   return { data };
 };
