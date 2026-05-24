@@ -1,4 +1,4 @@
-import thirdPartyApi from "@/api/config/thirdPartyApi";
+import thirdPartyApi from "./config";
 
 // 用户管理接口类型定义
 export interface UserItem {
@@ -21,10 +21,6 @@ export interface LoginResult {
     role: string;
   };
 }
-
-/**
- * 用户管理模块
- */
 
 // 获取用户列表
 export const getUsers = () => {

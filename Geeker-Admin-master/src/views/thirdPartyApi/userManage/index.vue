@@ -37,8 +37,8 @@
 <script setup lang="ts" name="userManage">
 import { ref, onMounted } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { getUsers, deleteUser } from "@/api/modules/thirdPartyUser";
-import type { UserItem } from "@/api/modules/thirdPartyUser";
+import { getUsers, deleteUser } from "@/api/thirdPartyApi/user";
+import type { UserItem } from "@/api/thirdPartyApi/user";
 
 const userList = ref<UserItem[]>([]);
 const currentUserId = ref<number>(1); // 当前登录用户 ID
