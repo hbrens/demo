@@ -62,6 +62,78 @@
       }
     },
     {
+      "path": "/thirdPartyApi",
+      "name": "thirdPartyApi",
+      "redirect": "/thirdPartyApi/apiCall",
+      "meta": {
+        "icon": "Connection",
+        "title": "第三方api",
+        "isLink": "",
+        "isHide": false,
+        "isFull": false,
+        "isAffix": false,
+        "isKeepAlive": true
+      },
+      "children": [
+        {
+          "path": "/thirdPartyApi/apiCall",
+          "name": "apiCall",
+          "component": "/thirdPartyApi/apiCall/index",
+          "meta": {
+            "icon": "Menu",
+            "title": "api调用",
+            "isLink": "",
+            "isHide": false,
+            "isFull": false,
+            "isAffix": false,
+            "isKeepAlive": true
+          }
+        },
+        {
+          "path": "/thirdPartyApi/apiManage",
+          "name": "apiManage",
+          "component": "/thirdPartyApi/apiManage/index",
+          "meta": {
+            "icon": "Menu",
+            "title": "api管理",
+            "isLink": "",
+            "isHide": false,
+            "isFull": false,
+            "isAffix": false,
+            "isKeepAlive": true
+          }
+        },
+        {
+          "path": "/thirdPartyApi/usageStats",
+          "name": "usageStats",
+          "component": "/thirdPartyApi/usageStats/index",
+          "meta": {
+            "icon": "Menu",
+            "title": "使用统计",
+            "isLink": "",
+            "isHide": false,
+            "isFull": false,
+            "isAffix": false,
+            "isKeepAlive": true
+          }
+        },
+        {
+          "path": "/thirdPartyApi/userManage",
+          "name": "userManage",
+          "component": "/thirdPartyApi/userManage/index",
+          "meta": {
+            "icon": "Menu",
+            "title": "用户管理",
+            "isLink": "",
+            "isHide": false,
+            "isFull": false,
+            "isAffix": false,
+            "isKeepAlive": true
+          }
+        }
+      ]
+    },
+    {
       "path": "/proTable",
       "name": "proTable",
       "redirect": "/proTable/useProTable",
